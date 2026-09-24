@@ -62,7 +62,8 @@
   /* ---------- 四维算分 ----------
      p: { followers, following, createdDays, statusesCount, verified, silentDays, posts }
      posts[i]: { likes, rt, rep, isRt, isReply }  （近 20 帖） ---------- */
-  C.compute = function (p) {
+  C.compute = function (p, opts) {
+    const partial = !!(opts && opts.partial);
     const { followers, following, createdDays, statusesCount, verified, silentDays, posts } = p;
 
     // 体量 25%：粉丝对数（100→0，1万→0.5，100万→1）+ 总帖微加成
@@ -86,7 +87,10 @@
     // 爆发 35%：近 20 帖去极值后中位互动 / 粉丝
     const interactions = posts.map(x => x.likes + 2 * x.rt + 3 * x.rep).sort((a, b) => a - b);
     let burst = 0;
-    if (interactions.length >= 3) {
+    if (partial) {
+      // 近况未计入：爆发维数据缺失，按中性 0.5 计分，不参与爆发类模板
+      burst = 0.5;
+    } else if (interactions.length >= 3) {
       const trimmed = interactions.slice(1, -1);
       const med = trimmed[Math.floor(trimmed.length / 2)];
       const perF = med / Math.max(followers, 1);
@@ -113,8 +117,8 @@
 
     const highFollowers = followers >= 50000;
     const lowFollowers = followers < 1500;
-    const burstHigh = burst >= 0.62;
-    const deadBurst = burst < 0.12;
+    const burstHigh = !partial && burst >= 0.62;
+    const deadBurst = !partial && burst < 0.12;
     const retweetRatio = posts.length ? posts.filter(x => x.isRt).length / posts.length : 0;
     const replyRatio = posts.length ? posts.filter(x => x.isReply).length / posts.length : 0;
     const newAccount = createdDays < 30;
@@ -127,7 +131,7 @@
       dims: { volume: vol, structure: struct, burst, activity: act },
       features: { highFollowers, lowFollowers, burstHigh, deadBurst, retweetRatio,
                   replyRatio, newAccount, oldAccount, lowStatuses, metronome,
-                  silentDays, verified, followers, following }
+                  silentDays, verified, followers, following, partial }
     };
   };
 
@@ -186,7 +190,8 @@
     const fs = C.fmtCount(f.followers);
     let style, tail;
 
-    if (f.silentDays >= 14) { style = '熄火'; tail = '老号正在冬眠'; }
+    if (f.partial) { style = '档案顶住'; tail = '近况待补'; }
+    else if (f.silentDays >= 14) { style = '熄火'; tail = '老号正在冬眠'; }
     else if (f.retweetRatio >= 0.8) { style = '转发比说话多'; tail = '像个中转站'; }
     else if (f.replyRatio >= 0.5) { style = '赞少评狠'; tail = '主场在评论区'; }
     else if (f.following > f.followers * 1.2) { style = '关注比粉丝多'; tail = '社交比输出勤快'; }
@@ -218,7 +223,7 @@
   C.buildResult = function (raw, opts) {
     const p = Object.assign({ handle: raw.handle || 'manual', name: raw.name || '手填选手',
       avatar: raw.avatar || null, avatarHue: raw.avatarHue != null ? raw.avatarHue : 210 }, raw);
-    const c = C.compute(p);
+    const c = C.compute(p, opts);
     const special = C.specialOf(p, c);
     const title = special ? special.title : C.buildTitle(p, c);
     const ai = C.buildComment(p, c);
