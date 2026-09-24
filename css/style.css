@@ -493,6 +493,9 @@ a { color: var(--tint); text-decoration: none; }
 .foot__details summary { cursor: pointer; font-weight: 600; color: var(--fg-2); }
 .foot__details p { margin-top: 8px; line-height: 1.7; }
 
+/* 修复：hidden 属性需强制生效（否则被下方 display:flex 覆盖导致浮层常驻） */
+[hidden] { display: none !important; }
+
 /* ---------- 海报浮层 ---------- */
 .poster-overlay {
   position: fixed; inset: 0; z-index: 100;
