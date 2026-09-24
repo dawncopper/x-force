@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b0f">
-<title>X战力镜 · 输入账号，查看战力</title>
-<meta name="description" content="输入一个 X 账号，8 秒内给出可晒的战力值、个性称号和一句短评。公开数据，仅供娱乐对线。">
+<title data-i18n="doc.title">X战力镜 · 输入账号，查看战力</title>
+<meta name="description" content="输入一个 X 账号，8 秒内给出可晒的战力值、个性称号和一句短评。公开数据，仅供娱乐对线。" data-i18n-meta="doc.desc">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,10 +21,15 @@
 <header class="topbar">
   <a class="brand" href="#/">
     <span class="brand__mark">X</span>
-    <span class="brand__name">战力镜</span>
+    <span class="brand__name" data-i18n="brand.name">战力镜</span>
   </a>
   <div class="topbar__right">
-    <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换明暗模式" title="切换明暗模式">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button class="lang-switch__btn" id="langAuto" type="button" data-lang="auto" data-i18n="lang.auto">自动</button>
+      <button class="lang-switch__btn" id="langZh" type="button" data-lang="zh">中</button>
+      <button class="lang-switch__btn" id="langEn" type="button" data-lang="en">EN</button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" data-i18n-aria="theme.aria" data-i18n-title="theme.title" aria-label="切换明暗模式" title="切换明暗模式">
       <span class="theme-toggle__icon theme-toggle__icon--moon">☾</span>
       <span class="theme-toggle__icon theme-toggle__icon--sun">☀</span>
     </button>
@@ -37,30 +42,31 @@
   <section class="screen screen--home is-active" id="screenHome">
     <div class="hero">
       <p class="hero__eyebrow">X POWER MIRROR</p>
-      <h1 class="hero__title">输入账号，<br>查看战力</h1>
-      <p class="hero__sub">8 秒出分 · 可晒的战力值 + 个性称号 + 一句短评</p>
+      <h1 class="hero__title"><span data-i18n="hero.title1">输入账号，</span><br><span data-i18n="hero.title2">查看战力</span></h1>
+      <p class="hero__sub" data-i18n="hero.sub">8 秒出分 · 可晒的战力值 + 个性称号 + 一句短评</p>
     </div>
 
     <form class="scan-form" id="scanForm" novalidate>
       <div class="scan-field" id="scanField">
         <span class="scan-field__prefix">@</span>
         <input id="scanInput" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               data-i18n-ph="scan.placeholder" data-i18n-aria="scan.aria"
                placeholder="X 账号，如 elonmusk" autofocus aria-label="X 账号">
-        <button class="scan-field__clear" id="inputClear" type="button" aria-label="清空输入" tabindex="-1">
+        <button class="scan-field__clear" id="inputClear" type="button" data-i18n-aria="scan.clear.aria" aria-label="清空输入" tabindex="-1">
           <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" opacity=".35"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
         </button>
       </div>
       <button class="cta" id="scanBtn" type="submit">
-        <span class="cta__label">查看战力</span>
+        <span class="cta__label" data-i18n="scan.btn">查看战力</span>
         <span class="cta__glow" aria-hidden="true"></span>
       </button>
-      <p class="scan-note">公开数据 · 仅供娱乐对线 · 不登录不授权不装插件</p>
+      <p class="scan-note" data-i18n="scan.note">公开数据 · 仅供娱乐对线 · 不登录不授权不装插件</p>
     </form>
 
     <!-- 解析 / 取数中 -->
     <div class="scan-status" id="scanStatus" hidden>
       <div class="scan-status__ring" aria-hidden="true"></div>
-      <p class="scan-status__text" id="scanStatusText">正在解析账号…</p>
+      <p class="scan-status__text" id="scanStatusText" data-i18n="status.parsing">正在解析账号…</p>
     </div>
 
     <!-- 配额提示 -->
@@ -98,11 +104,11 @@
       <div class="score-zone">
         <div class="score">
           <span class="score__num" id="rScore">0</span>
-          <span class="score__unit">分</span>
+          <span class="score__unit" data-i18n="score.unit">分</span>
         </div>
         <div class="score__meta">
           <span class="score__followers" id="rFollowers">—</span>
-          <span class="score__flag" id="rPartial" hidden>近况未计入</span>
+          <span class="score__flag" id="rPartial" data-i18n="result.partial" hidden>近况未计入</span>
         </div>
       </div>
 
@@ -117,70 +123,71 @@
       <div class="dims" id="rDims">
         <div class="dim" data-dim="volume">
           <div class="dim__bar"><i></i></div>
-          <span class="dim__label">体量</span><span class="dim__val">0</span>
+          <span class="dim__label" data-i18n="dim.volume">体量</span><span class="dim__val">0</span>
         </div>
         <div class="dim" data-dim="structure">
           <div class="dim__bar"><i></i></div>
-          <span class="dim__label">结构</span><span class="dim__val">0</span>
+          <span class="dim__label" data-i18n="dim.structure">结构</span><span class="dim__val">0</span>
         </div>
         <div class="dim" data-dim="burst">
           <div class="dim__bar"><i></i></div>
-          <span class="dim__label">爆发</span><span class="dim__val">0</span>
+          <span class="dim__label" data-i18n="dim.burst">爆发</span><span class="dim__val">0</span>
         </div>
         <div class="dim" data-dim="activity">
           <div class="dim__bar"><i></i></div>
-          <span class="dim__label">活性</span><span class="dim__val">0</span>
+          <span class="dim__label" data-i18n="dim.activity">活性</span><span class="dim__val">0</span>
         </div>
       </div>
     </article>
 
     <!-- 操作按钮 -->
     <div class="result-actions" id="resultActions" hidden>
-      <button class="act act--primary" id="copyBtn" type="button">复制文案</button>
-      <button class="act" id="posterBtn" type="button">生成海报</button>
-      <button class="act" id="againBtn" type="button">再测一个</button>
-      <button class="act" id="vsBtn" type="button">拉出来对比</button>
+      <button class="act act--primary" id="copyBtn" type="button" data-i18n="act.copy">复制文案</button>
+      <button class="act" id="posterBtn" type="button" data-i18n="act.poster">生成海报</button>
+      <button class="act" id="againBtn" type="button" data-i18n="act.again">再测一个</button>
+      <button class="act" id="vsBtn" type="button" data-i18n="act.vs">拉出来对比</button>
     </div>
-    <p class="copy-toast" id="copyToast" role="status" hidden>已复制，直接去 X 发帖</p>
+    <p class="copy-toast" id="copyToast" role="status" data-i18n="toast.copied" hidden>已复制，直接去 X 发帖</p>
   </section>
 
   <!-- 对比屏 -->
   <section class="screen screen--compare" id="screenCompare">
     <div class="vs-head">
-      <h2 class="vs-head__title">拉出来对比</h2>
-      <p class="vs-head__sub">各测一次，看谁赢在爆发，谁赢在体量</p>
+      <h2 class="vs-head__title" data-i18n="vs.title">拉出来对比</h2>
+      <p class="vs-head__sub" data-i18n="vs.sub">各测一次，看谁赢在爆发，谁赢在体量</p>
     </div>
     <form class="vs-form" id="vsForm" novalidate>
       <div class="vs-field">
         <span class="scan-field__prefix">@</span>
         <input id="vsInput" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               data-i18n-ph="vs.placeholder" data-i18n-aria="vs.aria"
                placeholder="再输一个 X 账号" aria-label="对比账号">
       </div>
-      <button class="cta cta--sm" type="submit"><span class="cta__label">开测对比</span></button>
+      <button class="cta cta--sm" type="submit"><span class="cta__label" data-i18n="vs.btn">开测对比</span></button>
     </form>
     <div class="vs-grid" id="vsGrid" hidden></div>
     <div class="vs-verdict" id="vsVerdict" hidden></div>
-    <button class="link-btn" id="vsBack" type="button">← 返回</button>
+    <button class="link-btn" id="vsBack" type="button" data-i18n="vs.back">← 返回</button>
   </section>
 
   <!-- 失败屏 -->
   <section class="screen screen--fail" id="screenFail">
     <div class="fail-card">
       <div class="fail-card__icon" aria-hidden="true">!</div>
-      <h2 class="fail-card__title" id="failTitle">这个账号不存在</h2>
-      <p class="fail-card__desc" id="failDesc">可能改名了，或者手滑输错。</p>
-      <button class="cta cta--sm" id="failBack" type="button"><span class="cta__label">再试一次</span></button>
-      <button class="link-btn" id="failManual" type="button" hidden>取数失败了？手填四个数</button>
+      <h2 class="fail-card__title" id="failTitle" data-i18n="fail.notFoundTitle">这个账号不存在</h2>
+      <p class="fail-card__desc" id="failDesc" data-i18n="fail.notFoundDesc">可能改名了，或者手滑输错。</p>
+      <button class="cta cta--sm" id="failBack" type="button"><span class="cta__label" data-i18n="fail.back">再试一次</span></button>
+      <button class="link-btn" id="failManual" type="button" data-i18n="fail.manual" hidden>取数失败了？手填四个数</button>
     </div>
     <!-- 手填后门 -->
     <form class="manual-form" id="manualForm" hidden>
       <div class="manual-grid">
-        <label>粉丝数<input type="number" id="mFollowers" min="0" placeholder="如 272"></label>
-        <label>关注数<input type="number" id="mFollowing" min="0" placeholder="如 318"></label>
-        <label>注册天数<input type="number" id="mCreated" min="0" placeholder="如 1560"></label>
-        <label>总帖数<input type="number" id="mStatuses" min="0" placeholder="如 4200"></label>
+        <label><span data-i18n="manual.followers">粉丝数</span><input type="number" id="mFollowers" min="0" data-i18n-ph="manual.followers.ph" placeholder="如 272"></label>
+        <label><span data-i18n="manual.following">关注数</span><input type="number" id="mFollowing" min="0" data-i18n-ph="manual.following.ph" placeholder="如 318"></label>
+        <label><span data-i18n="manual.created">注册天数</span><input type="number" id="mCreated" min="0" data-i18n-ph="manual.created.ph" placeholder="如 1560"></label>
+        <label><span data-i18n="manual.statuses">总帖数</span><input type="number" id="mStatuses" min="0" data-i18n-ph="manual.statuses.ph" placeholder="如 4200"></label>
       </div>
-      <button class="cta cta--sm" type="submit"><span class="cta__label">用手填数据测算</span></button>
+      <button class="cta cta--sm" type="submit"><span class="cta__label" data-i18n="manual.submit">用手填数据测算</span></button>
     </form>
   </section>
 
@@ -188,19 +195,19 @@
 
 <footer class="foot">
   <details class="foot__details">
-    <summary>公式与数据来源</summary>
-    <p>战力 = 体量 25% + 结构 20% + 爆发 35% + 活性 20%。体量按粉丝对数；爆发取近 20 帖去极值后的中位互动 / 粉丝；活性看近 14 天在场、原创比与发帖节奏。数据仅来自公开档案与公开近帖，不做任何非公开分析。</p>
+    <summary data-i18n="foot.summary">公式与数据来源</summary>
+    <p data-i18n="foot.formula">战力 = 体量 25% + 结构 20% + 爆发 35% + 活性 20%。体量按粉丝对数；爆发取近 20 帖去极值后的中位互动 / 粉丝；活性看近 14 天在场、原创比与发帖节奏。数据仅来自公开档案与公开近帖，不做任何非公开分析。</p>
   </details>
-  <p class="foot__disclaimer">娱乐战力，不是官方权重，不能当投放依据，不代表人品。</p>
+  <p class="foot__disclaimer" data-i18n="foot.disclaimer">娱乐战力，不是官方权重，不能当投放依据，不代表人品。</p>
 </footer>
 
 <!-- 海报浮层 -->
 <div class="poster-overlay" id="posterOverlay" hidden>
   <div class="poster-sheet">
-    <canvas id="posterCanvas" width="810" height="1440" aria-label="战力海报"></canvas>
+    <canvas id="posterCanvas" width="810" height="1440" data-i18n-aria="poster.canvasAria" aria-label="战力海报"></canvas>
     <div class="poster-actions">
-      <button class="act act--primary" id="posterDownload" type="button">发到 X</button>
-      <button class="act" id="posterClose" type="button">关闭</button>
+      <button class="act act--primary" id="posterDownload" type="button" data-i18n="poster.download">发到 X</button>
+      <button class="act" id="posterClose" type="button" data-i18n="poster.close">关闭</button>
     </div>
     <p class="poster-toast" id="posterToast" role="status" hidden></p>
   </div>
@@ -214,7 +221,7 @@
      apiBase 留空 ''        -> 本地 mock 演示模式（无需后端）
      apiBase 填后端地址      -> 真实取数模式，如 'http://192.168.1.10:8787' 或 '/api'
      后端需实现：
-       POST {apiBase}/api/scan   body {q: handle}
+       POST {apiBase}/api/scan   body {q: handle, lang: 'zh'|'en'}
        -> { ok, from_cache, quota_left, result }   result 字段见开发文档第 21 节
   ========================================= */
   window.XPM = window.XPM || {};
@@ -223,6 +230,7 @@
 <script src="js/data.js"></script>
 <script src="js/core.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

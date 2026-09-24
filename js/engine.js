@@ -82,21 +82,29 @@
     };
   };
 
-  const NAMES = ['北岸', '阿澈', '软糖', '远山', '老白', '南瓜', '青柠', '朔风', '板栗', '阿肆',
+  const NAMES_ZH = ['北岸', '阿澈', '软糖', '远山', '老白', '南瓜', '青柠', '朔风', '板栗', '阿肆',
     '渡鸦', '盐汽水', '小满', '木鱼', '白泽', '熬夜冠军', '半糖', '陈皮', '晚风', '铁柱'];
+  const NAMES_EN = ['Nova', 'Asher', 'Momo', 'Skye', 'Old Bai', 'Pumpkin', 'Lime', 'Storm', 'Chestnut', 'A4',
+    'Raven', 'Soda', 'Xiaoman', 'Woody', 'Bai Ze', 'Night Owl', 'Half Sugar', 'Tangerine', 'Breeze', 'Iron Pillar'];
+  const TAIL_ZH = ['同学', '酱', '君', '子', '先森', '少女', '本尊', '的账号', '频道', '日常'];
+  const TAIL_EN = ['', 'The', 'Jr', 'Official', 'Daily', 'Life', 'Central', 'Prime', 'Hub', 'Show'];
   function makeName(rnd) {
-    const a = pick(rnd, NAMES);
-    const b = pick(rnd, ['同学', '酱', '君', '子', '先森', '少女', '本尊', '的账号', '频道', '日常']);
-    return a + b;
+    const en = core.getLang() === 'en';
+    const a = pick(rnd, en ? NAMES_EN : NAMES_ZH);
+    const b = pick(rnd, en ? TAIL_EN : TAIL_ZH);
+    return en ? (b ? a + ' ' + b : a) : a + b;
   }
   function pick(rnd, arr) { return arr[Math.floor(rnd() * arr.length)]; }
 
   /* ---------- 前端缓存（仅本地 mock 模式使用；真实模式由后端缓存） ---------- */
   const CACHE_TTL = 12 * 3600 * 1000;
 
+  function cacheKey(handle) {
+    return 'xpm:' + (core.getLang() || 'zh') + ':' + String(handle).toLowerCase();
+  }
   E.getCache = function (handle) {
     try {
-      const raw = localStorage.getItem('xpm:' + handle.toLowerCase());
+      const raw = localStorage.getItem(cacheKey(handle));
       if (!raw) return null;
       const o = JSON.parse(raw);
       if (Date.now() - o.ts > CACHE_TTL) return null;
@@ -106,7 +114,7 @@
 
   E.setCache = function (handle, result) {
     try {
-      localStorage.setItem('xpm:' + handle.toLowerCase(), JSON.stringify({ ts: Date.now(), result }));
+      localStorage.setItem(cacheKey(handle), JSON.stringify({ ts: Date.now(), result }));
     } catch (e) { /* 存不下就算了 */ }
   };
 
@@ -141,7 +149,7 @@
     return fetch(E.apiBase + '/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: handle })
+      body: JSON.stringify({ q: handle, lang: core.getLang() || 'zh' })
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
@@ -174,7 +182,8 @@
   /* ---------- 手填后门 ---------- */
   E.scanManual = function (handle, m) {
     const p = {
-      handle: handle || 'manual', name: '手填选手', avatarHue: 210,
+      handle: handle || 'manual',
+      avatarHue: 210,
       followers: m.followers, following: m.following,
       createdDays: m.created, statusesCount: m.statuses,
       verified: false, silentDays: 0,

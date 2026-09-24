@@ -1,12 +1,15 @@
 /* ============================================================
    X战力镜 · app.js
-   状态机 / 揭晓动效 / 复制 / 海报(canvas) / 对比 / hash 路由 / 主题
+   状态机 / 揭晓动效 / 复制 / 海报(canvas) / 对比 / hash 路由 / 主题 / 多语言联动
    ============================================================ */
 'use strict';
 
 (function () {
   const XPM = window.XPM;
   const E = window.XPM.engine;
+  const I18N = window.XPM.i18n;
+  const T = I18N.t;        // 动态文案（含 {param} 占位）
+  const L = I18N.L;        // 取 {zh,en} 对象的当前语言值
   const $ = id => document.getElementById(id);
   const els = {
     home: $('screenHome'), result: $('screenResult'), compare: $('screenCompare'), fail: $('screenFail'),
@@ -29,21 +32,28 @@
 
   let current = null;        // 当前展示 result
   let vsBase = null;         // 对比基准（第一个号）
+  let lastHandle = null;     // 最近一次测算的账号（语言切换时重算用）
+  let lastManual = null;     // 最近一次手填输入（语言切换时重算用）
 
   /* ---------- 主题：明 / 暗 / 跟随系统 ---------- */
   const THEMES = ['auto', 'light', 'dark'];
+  const THEME_MODE_KEY = { auto: 'theme.mode.auto', dark: 'theme.mode.dark', light: 'theme.mode.light' };
   function applyTheme(mode) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const dark = mode === 'dark' || (mode === 'auto' && mq.matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
   }
+  function themeTitle() {
+    const cur = localStorage.getItem('xpm:theme') || 'auto';
+    els.themeToggle.title = T('theme.title.tpl', { mode: T(THEME_MODE_KEY[cur]) });
+  }
   function cycleTheme() {
     const cur = localStorage.getItem('xpm:theme') || 'auto';
     const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
     localStorage.setItem('xpm:theme', next);
     applyTheme(next);
-    els.themeToggle.title = '明暗模式：' + (next === 'auto' ? '跟随系统' : next === 'dark' ? '深色' : '浅色');
+    themeTitle();
   }
   els.themeToggle.addEventListener('click', cycleTheme);
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () =>
@@ -91,7 +101,7 @@
     const skAvatar = els.skeleton.querySelector('.skeleton--avatar');
     if (opts.preview) renderAvatar(skAvatar, opts.preview, 'sm');
     setTimeout(() => {
-      els.statusText.textContent = '正在取公开档案与近帖…';
+      els.statusText.textContent = T('status.fetching');
     }, 400);
 
     E.scan(handle).then(res => {
@@ -111,13 +121,13 @@
     els.rHandle.textContent = '@' + r.username;
     els.rTier.textContent = r.tier;
     els.rTier.classList.toggle('is-gold', !!r.special_title);
-    els.rFollowers.textContent = E.fmtCount(r.followers) + ' 粉丝 · ' + E.fmtCount(r.following) + ' 关注';
+    els.rFollowers.textContent = T('result.followers', { f: E.fmtCount(r.followers), g: E.fmtCount(r.following) });
     els.rPartial.hidden = !r.partial;
     els.rTitle.textContent = r.title;
     els.rTitle.classList.toggle('is-special', !!r.special_title);
-    els.rAlias.textContent = r.alias ? '「' + r.alias + '」' : '';
+    els.rAlias.textContent = r.alias ? T('result.aliasWrap', { a: r.alias }) : '';
     els.rSpecial.hidden = !r.special_title;
-    if (r.special_title) els.rSpecial.textContent = '已发现特称：' + r.special_title;
+    if (r.special_title) els.rSpecial.textContent = T('result.specialPrefix') + r.special_title;
     els.rComment.textContent = r.comment;
 
     // 四维条
@@ -138,8 +148,8 @@
 
     // 首次出分爆彩粒
     if (!fromCache) burstConfetti();
-    if (fromCache) els.copyToast.textContent = '来自 12 小时缓存，结果已冻结';
-    else els.copyToast.textContent = '已复制，直接去 X 发帖';
+    if (fromCache) els.copyToast.textContent = T('toast.cached');
+    else els.copyToast.textContent = T('toast.copied');
     els.copyToast.hidden = true;
   }
 
@@ -184,6 +194,8 @@
   });
 
   function startScan(handle) {
+    lastHandle = handle;
+    lastManual = null;
     const cached = E.getCache(handle);
     if (cached) {
       current = cached;
@@ -195,7 +207,7 @@
       return;
     }
     els.status.hidden = false;
-    els.statusText.textContent = '正在解析账号…';
+    els.statusText.textContent = T('status.parsing');
     els.scanBtn.classList.add('is-loading');
     els.scanBtn.disabled = true;
     setTimeout(() => {
@@ -208,8 +220,8 @@
 
   function showFail(type) {
     const f = XPM.FAILS[type] || XPM.FAILS.not_found;
-    els.failTitle.textContent = f.title;
-    els.failDesc.textContent = f.desc;
+    els.failTitle.textContent = L(f.title);
+    els.failDesc.textContent = L(f.desc);
     els.failManual.hidden = type !== 'fetch';
     els.manualForm.hidden = true;
     showScreen('fail');
@@ -227,6 +239,8 @@
       statuses: Math.max(0, parseInt(els.mStatuses.value || '0', 10))
     };
     if (m.followers === 0 && m.statuses === 0) return;
+    lastHandle = null;
+    lastManual = m;
     current = E.scanManual('manual', m);
     showScreen('result');
     els.body.hidden = false; els.actions.hidden = false;
@@ -238,7 +252,7 @@
   function updateQuota() {
     const left = E.quotaLeft();
     els.quota.hidden = left >= 5;
-    els.quota.textContent = '今日新测算剩余 ' + left + ' 次；同一账号回看不占次数';
+    els.quota.textContent = T('quota.tpl', { n: left });
   }
 
   /* ---------- 复制文案 ---------- */
@@ -249,7 +263,7 @@
   });
 
   function copyText(text) {
-    const done = () => { els.copyToast.textContent = '已复制，直接去 X 发帖'; els.copyToast.hidden = false; setTimeout(() => els.copyToast.hidden = true, 2200); };
+    const done = () => { els.copyToast.textContent = T('toast.copied'); els.copyToast.hidden = false; setTimeout(() => els.copyToast.hidden = true, 2200); };
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
     } else fallbackCopy(text, done);
@@ -283,11 +297,11 @@
     els.vsGrid.hidden = true; els.vsVerdict.hidden = true;
     const cached = E.getCache(handle);
     if (cached) { renderVs(cached); return; }
-    if (E.quotaLeft() < 2) { els.vsVerdict.hidden = false; els.vsVerdict.textContent = '今日新测算配额不足（对比需 2 次），先测自己的缓存吧。'; return; }
+    if (E.quotaLeft() < 2) { els.vsVerdict.hidden = false; els.vsVerdict.textContent = T('vs.quotaShort'); return; }
 
     E.scan(handle).then(res => {
       if (res.ok) { renderVs(res.result); E.consumeQuota(); E.consumeQuota(); updateQuota(); }
-      else { els.vsVerdict.hidden = false; els.vsVerdict.textContent = (XPM.FAILS[res.fail] || {}).title || '没查到对方，换个号试试。'; }
+      else { els.vsVerdict.hidden = false; els.vsVerdict.textContent = L((XPM.FAILS[res.fail] || {}).title) || T('vs.notFound'); }
     });
   });
 
@@ -314,16 +328,16 @@
 
     // 结论：谁赢在爆发，谁赢在体量
     let verdict;
-    if (base.score === other.score) verdict = '战力打平，谁也别说谁。';
+    if (base.score === other.score) verdict = T('vs.tie');
     else {
       const winner = base.score > other.score ? base : other;
       const loser = winner === base ? other : base;
       const parts = [];
-      if (winner.dims.burst > loser.dims.burst) parts.push(winner.username + ' 赢在爆发');
-      if (winner.dims.volume > loser.dims.volume) parts.push(winner.username + ' 赢在体量');
-      if (winner.dims.activity > loser.dims.activity) parts.push(winner.username + ' 赢在活性');
-      if (!parts.length) parts.push(winner.username + ' 综合略胜');
-      verdict = parts.join('，') + '。' + winner.username + '：' + winner.share_clause + '。';
+      if (winner.dims.burst > loser.dims.burst) parts.push(T('vs.winBurst', { u: winner.username }));
+      if (winner.dims.volume > loser.dims.volume) parts.push(T('vs.winVolume', { u: winner.username }));
+      if (winner.dims.activity > loser.dims.activity) parts.push(T('vs.winActivity', { u: winner.username }));
+      if (!parts.length) parts.push(T('vs.winOverall', { u: winner.username }));
+      verdict = parts.join(T('vs.join')) + T('vs.end') + winner.username + ': ' + winner.share_clause + '.';
     }
     els.vsVerdict.textContent = verdict;
     els.vsVerdict.hidden = false;
@@ -354,7 +368,7 @@
           }
         }, 'image/png');
       } catch (e) {
-        posterToast('图片导出被拦截，已打开发帖页');
+        posterToast(T('toast.poster.exportBlocked'));
         openTweetComposer(text, null);
       }
     });
@@ -377,7 +391,7 @@
     }
     const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
     if (!window.open(url, '_blank')) location.href = url;
-    posterToast(file ? '图片已保存，请在发帖页添加图片后发布' : '已打开发帖页，请粘贴文案后发布');
+    posterToast(file ? T('toast.poster.saved') : T('toast.poster.opened'));
   }
 
   /* 海报头像：CORS 加载 + 占位降级，导出前等待绘制完成 */
@@ -429,10 +443,10 @@
     // 顶栏：品牌
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.font = '700 30px -apple-system, "PingFang SC", sans-serif';
-    ctx.fillText('X 战力镜', 60, 84);
+    ctx.fillText(T('poster.brand'), 60, 84);
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
     ctx.font = '500 22px -apple-system, "PingFang SC", sans-serif';
-    ctx.fillText('X POWER MIRROR', 60, 116);
+    ctx.fillText(T('poster.tagline'), 60, 116);
 
     // 头像
     const ax = W / 2 - 92, ay = 210, as = 184;
@@ -466,7 +480,7 @@
     ctx.fillText(r.score, W / 2, scoreY);
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = '600 40px -apple-system, "PingFang SC", sans-serif';
-    ctx.fillText('战力值', W / 2, scoreY + 56);
+    ctx.fillText(T('poster.scoreLabel'), W / 2, scoreY + 56);
 
     // 主称号（视觉中心大字）
     const titleColor = r.special_title ? '#ffd60a' : '#8ecbff';
@@ -482,21 +496,23 @@
     // 底部短链 + 声明
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.font = '500 24px -apple-system, "PingFang SC", sans-serif';
-    ctx.fillText('你也来测：' + r.share_url.split('#')[0] + '#/u/' + r.username, W / 2, H - 110);
+    ctx.fillText(T('poster.tryYours') + r.share_url.split('#')[0] + '#/u/' + r.username, W / 2, H - 110);
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = '500 20px -apple-system, "PingFang SC", sans-serif';
-    ctx.fillText('娱乐战力 · 不是官方权重', W / 2, H - 64);
+    ctx.fillText(T('poster.disclaimer'), W / 2, H - 64);
     ctx.textAlign = 'left';
 
     els.posterOverlay.hidden = false;
   }
 
+  /* 断行：中文按字切，英文按词切 */
   function wrapText(ctx, text, cx, y, maxW, lh, center) {
-    const chars = String(text).split('');
+    const isLatin = /[a-zA-Z]/.test(text) && !/[\u4e00-\u9fa5]/.test(text);
+    const units = isLatin ? String(text).split(' ') : String(text).split('');
     let line = '', lines = [];
-    for (const ch of chars) {
-      const test = line + ch;
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = ch; }
+    for (const u of units) {
+      const test = line ? line + (isLatin ? ' ' : '') + u : u;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = u; }
       else line = test;
     }
     if (line) lines.push(line);
@@ -506,6 +522,25 @@
     });
     if (center) ctx.textAlign = 'left';
   }
+
+  /* ---------- 语言切换后重算当前结果（不动配额） ---------- */
+  I18N.onChange(() => {
+    themeTitle();
+    if (!current) return;
+    const wasManual = lastManual !== null;
+    const h = lastHandle;
+    const screenNow = document.querySelector('.screen.is-active');
+    if (wasManual) {
+      current = E.scanManual('manual', lastManual);
+      reveal(current, true);
+    } else if (h) {
+      runScan(h, { count: false });
+    }
+    // 若当前在结果/对比屏则保持；runScan 会切到 result 屏
+    if (screenNow && screenNow.id === 'screenCompare' && !wasManual) {
+      // 对比屏无缓存重算入口，保持原位由用户重开对比
+    }
+  });
 
   /* ---------- hash 路由：#/u/{username} 落地页 ---------- */
   function route() {
@@ -530,9 +565,10 @@
   window.addEventListener('hashchange', route);
 
   /* ---------- 初始化 ---------- */
+  I18N.init();                                   // 语言检测 + 静态文案 + 控件绑定
   applyTheme(localStorage.getItem('xpm:theme') || 'auto');
+  themeTitle();
   updateQuota();
   route();
-  els.themeToggle.title = '明暗模式';
   setTimeout(() => { if (location.hash.indexOf('#/u/') !== 0) els.input.focus(); }, 120);
 })();
