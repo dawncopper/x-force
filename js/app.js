@@ -23,7 +23,7 @@
     manualForm: $('manualForm'), mFollowers: $('mFollowers'), mFollowing: $('mFollowing'),
     mCreated: $('mCreated'), mStatuses: $('mStatuses'),
     posterOverlay: $('posterOverlay'), posterCanvas: $('posterCanvas'),
-    posterDownload: $('posterDownload'), posterClose: $('posterClose'),
+    posterDownload: $('posterDownload'), posterClose: $('posterClose'), posterToast: $('posterToast'),
     confetti: $('confetti'), themeToggle: $('themeToggle')
   };
 
@@ -333,11 +333,45 @@
   els.posterBtn.addEventListener('click', () => { if (current) drawPoster(current); });
   els.posterClose.addEventListener('click', () => { els.posterOverlay.hidden = true; });
   els.posterDownload.addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.download = 'xpower-' + (current ? current.username : 'poster') + '.png';
-    a.href = els.posterCanvas.toDataURL('image/png');
-    a.click();
+    if (!current) return;
+    const text = E.shareText(current, true);
+    els.posterToast.hidden = true;
+    els.posterCanvas.toBlob(blob => {
+      if (!blob) { openTweetComposer(text, null); return; }
+      const file = new File([blob], 'xpower-' + current.username + '.png', { type: 'image/png' });
+      // 优先系统分享（可带图直发 X 新帖）
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], text: text })
+          .then(() => { els.posterOverlay.hidden = true; })
+          .catch(err => {
+            if (err && err.name === 'AbortError') return; // 用户取消分享
+            openTweetComposer(text, file);
+          });
+      } else {
+        openTweetComposer(text, file);
+      }
+    }, 'image/png');
   });
+
+  function posterToast(msg) {
+    els.posterToast.textContent = msg;
+    els.posterToast.hidden = false;
+    setTimeout(() => { els.posterToast.hidden = true; }, 3200);
+  }
+
+  function openTweetComposer(text, file) {
+    // 降级：下载图片 + 打开 X 发帖页（预填文案），图片需手动添加
+    if (file) {
+      const a = document.createElement('a');
+      a.download = file.name;
+      a.href = URL.createObjectURL(file);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+    const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
+    if (!window.open(url, '_blank')) location.href = url;
+    posterToast(file ? '图片已保存，请在发帖页添加图片后发布' : '已打开发帖页，请粘贴文案后发布');
+  }
 
   function drawPoster(r) {
     const cv = els.posterCanvas;
