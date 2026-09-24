@@ -336,21 +336,28 @@
     if (!current) return;
     const text = E.shareText(current, true);
     els.posterToast.hidden = true;
-    els.posterCanvas.toBlob(blob => {
-      if (!blob) { openTweetComposer(text, null); return; }
-      const file = new File([blob], 'xpower-' + current.username + '.png', { type: 'image/png' });
-      // 优先系统分享（可带图直发 X 新帖）
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], text: text })
-          .then(() => { els.posterOverlay.hidden = true; })
-          .catch(err => {
-            if (err && err.name === 'AbortError') return; // 用户取消分享
+    whenPosterReady(() => {
+      try {
+        els.posterCanvas.toBlob(blob => {
+          if (!blob) { openTweetComposer(text, null); return; }
+          const file = new File([blob], 'xpower-' + current.username + '.png', { type: 'image/png' });
+          // 优先系统分享（可带图直发 X 新帖）
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], text: text })
+              .then(() => { els.posterOverlay.hidden = true; })
+              .catch(err => {
+                if (err && err.name === 'AbortError') return; // 用户取消分享
+                openTweetComposer(text, file);
+              });
+          } else {
             openTweetComposer(text, file);
-          });
-      } else {
-        openTweetComposer(text, file);
+          }
+        }, 'image/png');
+      } catch (e) {
+        posterToast('图片导出被拦截，已打开发帖页');
+        openTweetComposer(text, null);
       }
-    }, 'image/png');
+    });
   });
 
   function posterToast(msg) {
@@ -373,10 +380,34 @@
     posterToast(file ? '图片已保存，请在发帖页添加图片后发布' : '已打开发帖页，请粘贴文案后发布');
   }
 
+  /* 海报头像：CORS 加载 + 占位降级，导出前等待绘制完成 */
+  let posterAvatarPending = false;
+  const posterAvatarWaiters = [];
+  function drawPosterAvatarFallback(ctx, h, ax, ay, as, W, r) {
+    const ag = ctx.createLinearGradient(ax, ay, ax + as, ay + as);
+    ag.addColorStop(0, 'hsl(' + h + ' 82% 60%)');
+    ag.addColorStop(1, 'hsl(' + ((h + 45) % 360) + ' 74% 46%)');
+    ctx.fillStyle = ag; ctx.fillRect(ax, ay, as, as);
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 84px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((r.name || r.username || '?').charAt(0).toUpperCase(), W / 2, ay + as / 2 + 4);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+  function posterAvatarDone() {
+    posterAvatarPending = false;
+    posterAvatarWaiters.splice(0).forEach(fn => fn());
+  }
+  function whenPosterReady(fn) {
+    if (!posterAvatarPending) fn();
+    else posterAvatarWaiters.push(fn);
+  }
+
   function drawPoster(r) {
     const cv = els.posterCanvas;
     const ctx = cv.getContext('2d');
     const W = 810, H = 1440;
+    posterAvatarPending = false;
     ctx.clearRect(0, 0, W, H);
 
     // 背景
@@ -409,18 +440,13 @@
     ctx.beginPath(); ctx.arc(W / 2, ay + as / 2, as / 2, 0, Math.PI * 2); ctx.clip();
     if (r.avatar) {
       const img = new Image();
-      img.onload = () => { ctx.drawImage(img, ax, ay, as, as); };
+      img.crossOrigin = 'anonymous'; // CORS 加载，保证 canvas 可导出
+      img.onload = () => { ctx.drawImage(img, ax, ay, as, as); posterAvatarDone(); };
+      img.onerror = () => { drawPosterAvatarFallback(ctx, h, ax, ay, as, W, r); posterAvatarDone(); };
       img.src = r.avatar;
+      posterAvatarPending = true;
     } else {
-      const ag = ctx.createLinearGradient(ax, ay, ax + as, ay + as);
-      ag.addColorStop(0, 'hsl(' + h + ' 82% 60%)');
-      ag.addColorStop(1, 'hsl(' + ((h + 45) % 360) + ' 74% 46%)');
-      ctx.fillStyle = ag; ctx.fillRect(ax, ay, as, as);
-      ctx.fillStyle = '#fff';
-      ctx.font = '800 84px -apple-system, "PingFang SC", sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText((r.name || r.username || '?').charAt(0).toUpperCase(), W / 2, ay + as / 2 + 4);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      drawPosterAvatarFallback(ctx, h, ax, ay, as, W, r);
     }
     ctx.restore();
 
