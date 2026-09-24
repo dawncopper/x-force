@@ -1,229 +1,227 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="auto">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>X力指数计算器</title>
-  <meta name="description" content="用粉丝、关注、注册时间和发帖数，计算一个只能拿来玩的 X 影响力分数。" />
-  <style>
-    :root {
-      --bg: #000;
-      --card: #16181c;
-      --line: #2f3336;
-      --text: #e7e9ea;
-      --mute: #71767b;
-      --accent: #1d9bf0;
-      --gold: #f4c430;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: ui-sans-serif, system-ui, "PingFang SC", "Noto Sans SC", sans-serif;
-      background: radial-gradient(1200px 600px at 50% -10%, #0b2236 0%, #000 55%);
-      color: var(--text);
-      min-height: 100vh;
-    }
-    .wrap { max-width: 560px; margin: 0 auto; padding: 28px 18px 80px; }
-    h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.03em; }
-    .sub { color: var(--mute); margin-bottom: 22px; line-height: 1.5; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      margin-bottom: 14px;
-    }
-    label { display: block; font-size: 13px; color: var(--mute); margin: 12px 0 6px; }
-    input {
-      width: 100%;
-      background: #0b0c0e;
-      border: 1px solid var(--line);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 16px;
-    }
-    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    button {
-      width: 100%;
-      margin-top: 16px;
-      background: var(--accent);
-      color: #fff;
-      border: 0;
-      border-radius: 999px;
-      padding: 13px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    button:hover { filter: brightness(1.08); }
-    .ghost {
-      background: transparent;
-      border: 1px solid var(--line);
-      color: var(--text);
-      margin-top: 8px;
-    }
-    .samples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .chip {
-      background: #0b0c0e;
-      border: 1px solid var(--line);
-      color: var(--mute);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .score {
-      font-size: 72px;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      text-align: center;
-      margin: 8px 0 4px;
-    }
-    .rank {
-      text-align: center;
-      color: var(--gold);
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .comment { text-align: center; color: var(--mute); line-height: 1.6; }
-    .bars { margin-top: 16px; }
-    .bar-row { margin: 8px 0; }
-    .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--mute); margin-bottom: 4px; }
-    .track { height: 8px; background: #0b0c0e; border-radius: 99px; overflow: hidden; }
-    .fill { height: 100%; background: var(--accent); width: 0; transition: width .6s ease; }
-    #result { display: none; }
-    details { color: var(--mute); font-size: 13px; line-height: 1.7; }
-    summary { cursor: pointer; color: var(--text); margin-bottom: 8px; }
-    code { font-size: 12px; color: #9cd1ff; word-break: break-all; }
-    .foot { text-align: center; color: var(--mute); font-size: 12px; margin-top: 18px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0f">
+<title>X战力镜 · 输入账号，查看战力</title>
+<meta name="description" content="输入一个 X 账号，8 秒内给出可晒的战力值、个性称号和一句短评。公开数据，仅供娱乐对线。">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="wrap">
-    <h1>⚡ X力指数</h1>
-    <p class="sub">用粉丝、关注、注册时间和发帖数，随手算一个只能拿来玩的影响力分数。算完复制文案去 X 上对线。</p>
 
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>关注你的人（粉丝）</label>
-          <input id="followers" type="number" min="0" placeholder="例如 328" />
-        </div>
-        <div>
-          <label>你关注的人</label>
-          <input id="following" type="number" min="0" placeholder="例如 412" />
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>注册日期</label>
-          <input id="joined" type="date" />
-        </div>
-        <div>
-          <label>发过多少帖</label>
-          <input id="posts" type="number" min="0" placeholder="主页能看到" />
-        </div>
-      </div>
-      <button onclick="calc()">开始测算</button>
-      <div class="samples">
-        <span class="chip" onclick="fill(20,90,'2026-08-01',12)">新号</span>
-        <span class="chip" onclick="fill(280,400,'2023-06-01',360)">普通居民</span>
-        <span class="chip" onclick="fill(6200,540,'2021-03-12',2800)">中V</span>
-        <span class="chip" onclick="fill(150000,680,'2016-11-02',12000)">大V</span>
-        <span class="chip" onclick="fill(220000000,1160,'2009-06-02',45000)">某车企老板</span>
-      </div>
-    </div>
+<!-- 背景光斑 -->
+<div class="aurora" aria-hidden="true">
+  <div class="aurora__orb aurora__orb--1"></div>
+  <div class="aurora__orb aurora__orb--2"></div>
+  <div class="aurora__orb aurora__orb--3"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
 
-    <div class="card" id="result">
-      <div class="comment">你的 X力指数是</div>
-      <div class="score" id="score">0</div>
-      <div class="rank" id="rank"></div>
-      <div class="comment" id="comment"></div>
-      <div class="bars">
-        <div class="bar-row"><div class="bar-label"><span>粉丝势能</span><span id="t1"></span></div><div class="track"><div class="fill" id="b1"></div></div></div>
-        <div class="bar-row"><div class="bar-label"><span>关注结构</span><span id="t2"></span></div><div class="track"><div class="fill" id="b2"></div></div></div>
-        <div class="bar-row"><div class="bar-label"><span>账号年限</span><span id="t3"></span></div><div class="track"><div class="fill" id="b3"></div></div></div>
-        <div class="bar-row"><div class="bar-label"><span>活跃度</span><span id="t3b"></span></div><div class="track"><div class="fill" id="b4"></div></div></div>
-      </div>
-      <button class="ghost" onclick="copyShare()">复制分享文案</button>
-    </div>
-
-    <div class="card">
-      <details>
-        <summary>公式（拍脑袋版，仅供娱乐）</summary>
-        <p>粉丝势能用对数，避免顶流把分数撑爆；关注结构奖励「被人关注远多于自己关注」；年限和发帖是温和加成。</p>
-        <p><code>X = 7.4 × log10(F+8)^1.35 × ((F+30)/(F+G+200))^0.55 × log10(D+60)^0.85 × (0.82 + 0.18×min(log10(P+5),4.5))</code></p>
-      </details>
-    </div>
-    <div class="foot">数据只在本地计算，不上传。分数高低不说明人品，只说明这套公式喜欢什么样的公开数字。</div>
+<header class="topbar">
+  <a class="brand" href="#/">
+    <span class="brand__mark">X</span>
+    <span class="brand__name">战力镜</span>
+  </a>
+  <div class="topbar__right">
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换明暗模式" title="切换明暗模式">
+      <span class="theme-toggle__icon theme-toggle__icon--moon">☾</span>
+      <span class="theme-toggle__icon theme-toggle__icon--sun">☀</span>
+    </button>
   </div>
+</header>
 
-  <script>
-    const $ = id => document.getElementById(id);
-    function fill(f, g, d, p) {
-      $("followers").value = f;
-      $("following").value = g;
-      $("joined").value = d;
-      $("posts").value = p;
-      calc();
-    }
-    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function titleOf(x) {
-      if (x < 15) return ["潜水观察员", "存在感接近空气，但空气也是生态的一部分。"];
-      if (x < 40) return ["普通居民", "广场上最常见的一种碳基生物，发帖偶尔有人回。"];
-      if (x < 80) return ["街区名人", "圈子里能叫得出号，出了街区就要重新自我介绍。"];
-      if (x < 150) return ["小有名气", "已经不是路人，但离被乱喊「老师」还差一口气。"];
-      if (x < 250) return ["垂直大佬", "你说话，同赛道的人会侧耳。别的赛道可能还没听说过你。"];
-      if (x < 350) return ["一方诸侯", "号本身就是流量。请注意言辞，被截图是工作的一部分。"];
-      if (x < 500) return ["平台巨兽", "你的关注列表比很多人的粉丝列表还值钱。"];
-      return ["传说级存在", "公式在你这儿已经有点不好意思了。"];
-    }
-    function calc() {
-      const F = Math.max(0, Number($("followers").value) || 0);
-      const G = Math.max(0, Number($("following").value) || 0);
-      const P = Math.max(0, Number($("posts").value) || 0);
-      const joined = $("joined").value ? new Date($("joined").value) : new Date();
-      const D = Math.max(1, Math.floor((Date.now() - joined.getTime()) / 86400000));
+<main class="stage">
 
-      const fTerm = Math.pow(Math.log10(F + 8), 1.35);
-      const rTerm = Math.pow((F + 30) / (F + G + 200), 0.55);
-      const aTerm = Math.pow(Math.log10(D + 60), 0.85);
-      const pTerm = 0.82 + 0.18 * Math.min(Math.log10(P + 5), 4.5);
-      const score = Math.round(7.4 * fTerm * rTerm * aTerm * pTerm * 10) / 10;
+  <!-- 首页：空态 -->
+  <section class="screen screen--home is-active" id="screenHome">
+    <div class="hero">
+      <p class="hero__eyebrow">X POWER MIRROR</p>
+      <h1 class="hero__title">输入账号，<br>查看战力</h1>
+      <p class="hero__sub">8 秒出分 · 可晒的战力值 + 个性称号 + 一句短评</p>
+    </div>
 
-      const [rank, comment] = titleOf(score);
-      $("score").textContent = score.toFixed(1);
-      $("rank").textContent = rank;
-      $("comment").textContent = comment + `（注册 ${D} 天）`;
-      $("result").style.display = "block";
+    <form class="scan-form" id="scanForm" novalidate>
+      <div class="scan-field" id="scanField">
+        <span class="scan-field__prefix">@</span>
+        <input id="scanInput" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               placeholder="X 账号，如 elonmusk" autofocus aria-label="X 账号">
+        <button class="scan-field__clear" id="inputClear" type="button" aria-label="清空输入" tabindex="-1">
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" opacity=".35"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <button class="cta" id="scanBtn" type="submit">
+        <span class="cta__label">查看战力</span>
+        <span class="cta__glow" aria-hidden="true"></span>
+      </button>
+      <p class="scan-note">公开数据 · 仅供娱乐对线 · 不登录不授权不装插件</p>
+    </form>
 
-      const bars = [
-        ["b1", "t1", clamp(Math.log10(F + 8) / 6, 0, 1), "粉丝 " + F],
-        ["b2", "t2", clamp(rTerm, 0, 1), "粉关比 " + (G ? (F / G).toFixed(2) : "∞")],
-        ["b3", "t3", clamp(Math.log10(D + 60) / 3.8, 0, 1), D + " 天"],
-        ["b4", "t3b", clamp((pTerm - 0.82) / 0.18, 0, 1), P + " 帖"]
-      ];
-      bars.forEach(([id, tid, v, label]) => {
-        $(id).style.width = (v * 100).toFixed(1) + "%";
-        $(tid).textContent = label;
-      });
+    <!-- 解析 / 取数中 -->
+    <div class="scan-status" id="scanStatus" hidden>
+      <div class="scan-status__ring" aria-hidden="true"></div>
+      <p class="scan-status__text" id="scanStatusText">正在解析账号…</p>
+    </div>
 
-      window._share = `我的 X力指数是 ${score.toFixed(1)}（${rank}）。粉丝 ${F} / 关注 ${G} / 注册 ${D} 天 / ${P} 帖。纯属娱乐，你也来算一个：${location.href}`;
-      $("result").scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    async function copyShare() {
-      const text = window._share || location.href;
-      try {
-        await navigator.clipboard.writeText(text);
-        alert("已复制，去 X 上贴吧。");
-      } catch {
-        prompt("复制下面这句：", text);
-      }
-    }
-  </script>
+    <!-- 配额提示 -->
+    <p class="quota" id="quotaNote" hidden></p>
+  </section>
+
+  <!-- 结果屏 -->
+  <section class="screen screen--result" id="screenResult">
+
+    <!-- 取数骨架（先铺头像名字粉丝） -->
+    <div class="result-card skeleton-card" id="resultSkeleton" hidden>
+      <div class="skeleton-card__head">
+        <div class="skeleton skeleton--avatar"></div>
+        <div class="skeleton-card__meta">
+          <div class="skeleton skeleton--line skeleton--w60"></div>
+          <div class="skeleton skeleton--line skeleton--w40"></div>
+        </div>
+      </div>
+      <div class="skeleton skeleton--big"></div>
+      <div class="skeleton skeleton--line skeleton--w80"></div>
+      <div class="skeleton skeleton--line skeleton--w70"></div>
+    </div>
+
+    <!-- 揭晓结果 -->
+    <article class="result-card result" id="resultBody" hidden>
+      <div class="result__head">
+        <div class="avatar avatar--lg" id="rAvatar" aria-hidden="true"></div>
+        <div class="result__id">
+          <p class="result__name" id="rName">—</p>
+          <p class="result__handle" id="rHandle">@—</p>
+        </div>
+        <span class="tier-pill" id="rTier">—</span>
+      </div>
+
+      <div class="score-zone">
+        <div class="score">
+          <span class="score__num" id="rScore">0</span>
+          <span class="score__unit">分</span>
+        </div>
+        <div class="score__meta">
+          <span class="score__followers" id="rFollowers">—</span>
+          <span class="score__flag" id="rPartial" hidden>近况未计入</span>
+        </div>
+      </div>
+
+      <div class="title-zone">
+        <h2 class="main-title" id="rTitle">—</h2>
+        <p class="alias" id="rAlias"></p>
+        <p class="special" id="rSpecial" hidden></p>
+      </div>
+
+      <p class="comment" id="rComment">—</p>
+
+      <div class="dims" id="rDims">
+        <div class="dim" data-dim="volume">
+          <div class="dim__bar"><i></i></div>
+          <span class="dim__label">体量</span><span class="dim__val">0</span>
+        </div>
+        <div class="dim" data-dim="structure">
+          <div class="dim__bar"><i></i></div>
+          <span class="dim__label">结构</span><span class="dim__val">0</span>
+        </div>
+        <div class="dim" data-dim="burst">
+          <div class="dim__bar"><i></i></div>
+          <span class="dim__label">爆发</span><span class="dim__val">0</span>
+        </div>
+        <div class="dim" data-dim="activity">
+          <div class="dim__bar"><i></i></div>
+          <span class="dim__label">活性</span><span class="dim__val">0</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 操作按钮 -->
+    <div class="result-actions" id="resultActions" hidden>
+      <button class="act act--primary" id="copyBtn" type="button">复制文案</button>
+      <button class="act" id="posterBtn" type="button">生成海报</button>
+      <button class="act" id="againBtn" type="button">再测一个</button>
+      <button class="act" id="vsBtn" type="button">拉出来对比</button>
+    </div>
+    <p class="copy-toast" id="copyToast" role="status" hidden>已复制，直接去 X 发帖</p>
+  </section>
+
+  <!-- 对比屏 -->
+  <section class="screen screen--compare" id="screenCompare">
+    <div class="vs-head">
+      <h2 class="vs-head__title">拉出来对比</h2>
+      <p class="vs-head__sub">各测一次，看谁赢在爆发，谁赢在体量</p>
+    </div>
+    <form class="vs-form" id="vsForm" novalidate>
+      <div class="vs-field">
+        <span class="scan-field__prefix">@</span>
+        <input id="vsInput" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               placeholder="再输一个 X 账号" aria-label="对比账号">
+      </div>
+      <button class="cta cta--sm" type="submit"><span class="cta__label">开测对比</span></button>
+    </form>
+    <div class="vs-grid" id="vsGrid" hidden></div>
+    <div class="vs-verdict" id="vsVerdict" hidden></div>
+    <button class="link-btn" id="vsBack" type="button">← 返回</button>
+  </section>
+
+  <!-- 失败屏 -->
+  <section class="screen screen--fail" id="screenFail">
+    <div class="fail-card">
+      <div class="fail-card__icon" aria-hidden="true">!</div>
+      <h2 class="fail-card__title" id="failTitle">这个账号不存在</h2>
+      <p class="fail-card__desc" id="failDesc">可能改名了，或者手滑输错。</p>
+      <button class="cta cta--sm" id="failBack" type="button"><span class="cta__label">再试一次</span></button>
+      <button class="link-btn" id="failManual" type="button" hidden>取数失败了？手填四个数</button>
+    </div>
+    <!-- 手填后门 -->
+    <form class="manual-form" id="manualForm" hidden>
+      <div class="manual-grid">
+        <label>粉丝数<input type="number" id="mFollowers" min="0" placeholder="如 272"></label>
+        <label>关注数<input type="number" id="mFollowing" min="0" placeholder="如 318"></label>
+        <label>注册天数<input type="number" id="mCreated" min="0" placeholder="如 1560"></label>
+        <label>总帖数<input type="number" id="mStatuses" min="0" placeholder="如 4200"></label>
+      </div>
+      <button class="cta cta--sm" type="submit"><span class="cta__label">用手填数据测算</span></button>
+    </form>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <details class="foot__details">
+    <summary>公式与数据来源</summary>
+    <p>战力 = 体量 25% + 结构 20% + 爆发 35% + 活性 20%。体量按粉丝对数；爆发取近 20 帖去极值后的中位互动 / 粉丝；活性看近 14 天在场、原创比与发帖节奏。数据仅来自公开档案与公开近帖，不做任何非公开分析。</p>
+  </details>
+  <p class="foot__disclaimer">娱乐战力，不是官方权重，不能当投放依据，不代表人品。</p>
+</footer>
+
+<!-- 海报浮层 -->
+<div class="poster-overlay" id="posterOverlay" hidden>
+  <div class="poster-sheet">
+    <canvas id="posterCanvas" width="810" height="1440" aria-label="战力海报"></canvas>
+    <div class="poster-actions">
+      <button class="act act--primary" id="posterDownload" type="button">下载海报</button>
+      <button class="act" id="posterClose" type="button">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 彩粒容器 -->
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+
+<script>
+  /* ============ 真实数据接入配置 ============
+     apiBase 留空 ''        -> 本地 mock 演示模式（无需后端）
+     apiBase 填后端地址      -> 真实取数模式，如 'http://192.168.1.10:8787' 或 '/api'
+     后端需实现：
+       POST {apiBase}/api/scan   body {q: handle}
+       -> { ok, from_cache, quota_left, result }   result 字段见开发文档第 21 节
+  ========================================= */
+  window.XPM = window.XPM || {};
+  window.XPM.CONFIG = { apiBase: 'https://x-power-mirror.toonyliu.workers.dev' };
+</script>
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
