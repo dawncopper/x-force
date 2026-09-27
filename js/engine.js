@@ -150,12 +150,11 @@
      GET {apiBase}/api/scan?q={handle}&lang={lang}&keyword={keyword}
      （用 GET：部分网络/安全层对跨域 POST 拦截更严，GET 更稳）
      -> { ok: true, from_cache, quota_left, result } 或 { ok: false, fail, result: null } */
-  E.scanRemote = function (handle, opts) {
-    const qs = new URLSearchParams({ q: handle, lang: core.getLang() || 'zh' });
-    if (opts && opts.keyword) qs.set('keyword', String(opts.keyword));
+  E._scanOnce = function (handle, qs) {
     return fetch(E.apiBase + '/api/scan?' + qs.toString(), {
       method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(12000)   // 12s 兜底，避免无限等待
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
@@ -165,8 +164,16 @@
         return { ok: true, fromCache: !!body.from_cache, result: body.result };
       }
       return { ok: false, fail: (body && body.fail) || 'fetch', result: null };
-    }).catch(function () {
-      return { ok: false, fail: 'fetch', result: null };
+    });
+  };
+  E.scanRemote = function (handle, opts) {
+    const qs = new URLSearchParams({ q: handle, lang: core.getLang() || 'zh' });
+    if (opts && opts.keyword) qs.set('keyword', String(opts.keyword));
+    return E._scanOnce(handle, qs).catch(function (e) {
+      // 网络抖动/超时自动重试一次，仍失败才报 fetch
+      return E._scanOnce(handle, qs).catch(function () {
+        return { ok: false, fail: 'fetch', result: null };
+      });
     });
   };
 
