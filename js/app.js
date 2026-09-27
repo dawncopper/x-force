@@ -150,7 +150,8 @@
     els.rComment.textContent = r.comment;
 
     // 稀有度徽章（第 3 项：盲盒换梗）
-    const hasRarity = r.rarity && XPM.core.RARITIES[r.rarity];
+    const rarityDef = r.rarity && E.rarityOf(r.rarity);
+    const hasRarity = !!rarityDef;
     els.rRarity.hidden = !hasRarity;
     if (hasRarity) {
       els.rRarity.textContent = T('rarity.label', { r: T('rarity.' + r.rarity) });
