@@ -125,7 +125,12 @@
       if (!res.fromCache && opts.count) E.consumeQuota();
       reveal(res.result, res.fromCache);
       updateQuota();
-    }).catch(() => showFail('fetch'));
+    }).catch(() => {
+      // 网络异常兜底：优先展示本地缓存结果，避免查询失败时一无所获
+      const cached = E.getCache(handle);
+      if (cached) { current = cached; reveal(cached, true); updateQuota(); return; }
+      showFail('fetch');
+    });
   }
 
   function reveal(r, fromCache) {
