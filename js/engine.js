@@ -147,15 +147,15 @@
   };
 
   /* ---------- 真实后端取数 ----------
-     POST {apiBase}/api/scan  {q: handle, lang, keyword}
+     GET {apiBase}/api/scan?q={handle}&lang={lang}&keyword={keyword}
+     （用 GET：部分网络/安全层对跨域 POST 拦截更严，GET 更稳）
      -> { ok: true, from_cache, quota_left, result } 或 { ok: false, fail, result: null } */
   E.scanRemote = function (handle, opts) {
-    const body = { q: handle, lang: core.getLang() || 'zh' };
-    if (opts && opts.keyword) body.keyword = String(opts.keyword);
-    return fetch(E.apiBase + '/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+    const qs = new URLSearchParams({ q: handle, lang: core.getLang() || 'zh' });
+    if (opts && opts.keyword) qs.set('keyword', String(opts.keyword));
+    return fetch(E.apiBase + '/api/scan?' + qs.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
