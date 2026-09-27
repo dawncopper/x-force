@@ -244,9 +244,8 @@
     const handle = E.parseHandle(tokens[0] || '');
     if (!handle) { els.field.style.borderColor = 'var(--danger)'; setTimeout(() => els.field.style.borderColor = '', 1200); return; }
     const keyword = tokens.slice(1).join(' ').trim() || undefined; // 彩蛋关键词：@账号 关键词
-    if (E.quotaLeft() <= 0 && !E.getCache(handle)) {
-      showFail('rate_limit'); return;
-    }
+    // 配额仅作展示，不再前端拦截：本地记忆的 quotaLeft 可能失真（曾耗尽后死锁），
+    // 请求始终发往后端，由后端返回真实结果与最新 quota_left（缓存命中免费）
     startScan(handle, keyword);
   });
 
