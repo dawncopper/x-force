@@ -19,7 +19,9 @@
     rAvatar: $('rAvatar'), rName: $('rName'), rHandle: $('rHandle'), rTier: $('rTier'),
     rScore: $('rScore'), rFollowers: $('rFollowers'), rPartial: $('rPartial'),
     rTitle: $('rTitle'), rAlias: $('rAlias'), rSpecial: $('rSpecial'), rComment: $('rComment'),
+    rRarity: $('rRarity'), rEggBadge: $('rEggBadge'), rerollBtn: $('rerollBtn'),
     copyBtn: $('copyBtn'), posterBtn: $('posterBtn'), againBtn: $('againBtn'), vsBtn: $('vsBtn'),
+    challengeBtn: $('challengeBtn'), trendBtn: $('trendBtn'),
     copyToast: $('copyToast'),
     vsForm: $('vsForm'), vsInput: $('vsInput'), vsGrid: $('vsGrid'), vsVerdict: $('vsVerdict'), vsBack: $('vsBack'),
     failTitle: $('failTitle'), failDesc: $('failDesc'), failBack: $('failBack'), failManual: $('failManual'),
@@ -27,13 +29,25 @@
     mCreated: $('mCreated'), mStatuses: $('mStatuses'),
     posterOverlay: $('posterOverlay'), posterCanvas: $('posterCanvas'),
     posterDownload: $('posterDownload'), posterClose: $('posterClose'), posterToast: $('posterToast'),
-    confetti: $('confetti'), themeToggle: $('themeToggle')
+    confetti: $('confetti'), themeToggle: $('themeToggle'),
+    settingsOverlay: $('settingsOverlay'), soundSwitch: $('soundSwitch'), vibrateSwitch: $('vibrateSwitch'),
+    challengeOverlay: $('challengeOverlay'), challengeForm: $('challengeForm'),
+    challengeTarget: $('challengeTarget'), challengeLinkBox: $('challengeLinkBox'),
+    challengeLink: $('challengeLink'), challengeCopyBtn: $('challengeCopyBtn'),
+    challengeMine: $('challengeMine'), challengeMineEmpty: $('challengeMineEmpty'),
+    challengeLandingOverlay: $('challengeLandingOverlay'), challengeLandingBody: $('challengeLandingBody'),
+    trendOverlay: $('trendOverlay'), trendChart: $('trendChart'), trendEmpty: $('trendEmpty'), trendList: $('trendList'),
+    lbOverlay: $('lbOverlay'), lbList: $('lbList'), lbEmpty: $('lbEmpty'),
+    collectionOverlay: $('collectionOverlay'), collectionGrid: $('collectionGrid'),
+    collectionProgress: $('collectionProgress'), collectionEmpty: $('collectionEmpty'),
+    lbBtn: $('lbBtn'), collectionBtn: $('collectionBtn'), settingsBtn: $('settingsBtn')
   };
 
   let current = null;        // 当前展示 result
   let vsBase = null;         // 对比基准（第一个号）
   let lastHandle = null;     // 最近一次测算的账号（语言切换时重算用）
   let lastManual = null;     // 最近一次手填输入（语言切换时重算用）
+  let lastKeyword = null;    // 最近一次彩蛋关键词
 
   /* ---------- 主题：明 / 暗 / 跟随系统 ---------- */
   const THEMES = ['auto', 'light', 'dark'];
@@ -104,7 +118,7 @@
       els.statusText.textContent = T('status.fetching');
     }, 400);
 
-    E.scan(handle).then(res => {
+    E.scan(handle, { keyword: opts.keyword }).then(res => {
       els.skeleton.hidden = true;
       if (!res.ok) { showFail(res.fail); return; }
       current = res.result;
@@ -130,6 +144,25 @@
     if (r.special_title) els.rSpecial.textContent = T('result.specialPrefix') + r.special_title;
     els.rComment.textContent = r.comment;
 
+    // 稀有度徽章（第 3 项：盲盒换梗）
+    const hasRarity = r.rarity && XPM.core.RARITIES[r.rarity];
+    els.rRarity.hidden = !hasRarity;
+    if (hasRarity) {
+      els.rRarity.textContent = T('rarity.label', { r: T('rarity.' + r.rarity) });
+      els.rRarity.className = 'rarity-pill rarity-pill--' + r.rarity;
+    }
+
+    // 彩蛋徽章（第 2 项：隐藏彩蛋称号）
+    const hasEgg = !!r.egg_id;
+    els.rEggBadge.hidden = !hasEgg;
+    if (hasEgg) {
+      els.rEggBadge.textContent = '✨ ' + r.egg_badge;
+      if (!fromCache) unlockEgg(r.egg_id);
+    }
+
+    // 换梗按钮：仅普通盲盒梗可换，彩蛋锁定
+    els.rerollBtn.hidden = !hasRarity || hasEgg;
+
     // 四维条
     DIM_KEYS.forEach((k, i) => {
       const row = els.body.querySelector('.dim[data-dim="' + k + '"]');
@@ -143,14 +176,35 @@
     els.rScore.classList.add('is-popping');
     animateNumber(els.rScore, 0, r.score, 900, fromCache ? 260 : 900);
 
-    // 称号砸出
-    setTimeout(() => els.rTitle.classList.add('is-dropping'), fromCache ? 40 : 320);
+    // 称号砸出 + 抽卡翻牌动效（第 6 项：揭晓动效增强）
+    setTimeout(() => {
+      els.rTitle.classList.add('is-dropping');
+      els.body.classList.add('is-card-flip');
+      setTimeout(() => els.body.classList.remove('is-card-flip'), 520);
+    }, fromCache ? 40 : 320);
+
+    // 音效 + 震动（第 6 项，受设置开关控制）
+    if (!fromCache) {
+      XPM.sound.play('reveal');
+      XPM.sound.vibrate([40, 50, 40]);
+    }
 
     // 首次出分爆彩粒
     if (!fromCache) burstConfetti();
     if (fromCache) els.copyToast.textContent = T('toast.cached');
     else els.copyToast.textContent = T('toast.copied');
     els.copyToast.hidden = true;
+  }
+
+  /* 彩蛋解锁：记录到本地图鉴 */
+  function unlockEgg(eggKey) {
+    try {
+      const list = JSON.parse(localStorage.getItem('xpm:eggs') || '[]');
+      if (list.indexOf(eggKey) === -1) { list.push(eggKey); localStorage.setItem('xpm:eggs', JSON.stringify(list)); }
+    } catch (e) { /* ignore */ }
+  }
+  function eggUnlocked(eggKey) {
+    try { return (JSON.parse(localStorage.getItem('xpm:eggs') || '[]')).indexOf(eggKey) !== -1; } catch (e) { return false; }
   }
 
   function animateNumber(el, from, to, dur, delay = 0) {
@@ -185,17 +239,21 @@
   /* ---------- 提交 ---------- */
   els.form.addEventListener('submit', e => {
     e.preventDefault();
-    const handle = E.parseHandle(els.input.value);
+    const raw = els.input.value.trim();
+    const tokens = raw.split(/\s+/).filter(Boolean);
+    const handle = E.parseHandle(tokens[0] || '');
     if (!handle) { els.field.style.borderColor = 'var(--danger)'; setTimeout(() => els.field.style.borderColor = '', 1200); return; }
+    const keyword = tokens.slice(1).join(' ').trim() || undefined; // 彩蛋关键词：@账号 关键词
     if (E.quotaLeft() <= 0 && !E.getCache(handle)) {
       showFail('rate_limit'); return;
     }
-    startScan(handle);
+    startScan(handle, keyword);
   });
 
-  function startScan(handle) {
+  function startScan(handle, keyword) {
     lastHandle = handle;
     lastManual = null;
+    lastKeyword = keyword;
     const cached = E.getCache(handle);
     if (cached) {
       current = cached;
@@ -214,9 +272,28 @@
       els.status.hidden = true;
       els.scanBtn.classList.remove('is-loading');
       els.scanBtn.disabled = false;
-      runScan(handle, { count: true });
+      runScan(handle, { count: true, keyword: keyword });
     }, 420);
   }
+
+  /* ---------- 换梗（第 3 项：称号盲盒换梗） ---------- */
+  els.rerollBtn.addEventListener('click', () => {
+    if (!current || !current.rarity || current.egg_id) return;
+    XPM.sound.play('tap');
+    const oldRarity = current.rarity;
+    const next = E.rerollTitle(current);
+    current = next;
+    els.rTitle.textContent = next.title;
+    els.rTitle.classList.remove('is-dropping');
+    void els.rTitle.offsetWidth;
+    els.rTitle.classList.add('is-dropping');
+    els.rComment.textContent = next.comment;
+    if (next.rarity !== oldRarity) {
+      els.rRarity.textContent = T('rarity.label', { r: T('rarity.' + next.rarity) });
+      els.rRarity.className = 'rarity-pill rarity-pill--' + next.rarity;
+    }
+    XPM.sound.vibrate(20);
+  });
 
   function showFail(type) {
     const f = XPM.FAILS[type] || XPM.FAILS.not_found;
@@ -482,8 +559,8 @@
     ctx.font = '600 40px -apple-system, "PingFang SC", sans-serif';
     ctx.fillText(T('poster.scoreLabel'), W / 2, scoreY + 56);
 
-    // 主称号（视觉中心大字）
-    const titleColor = r.special_title ? '#ffd60a' : '#8ecbff';
+    // 主称号（视觉中心大字，联动主题 accent）
+    const titleColor = r.special_title ? '#ffd60a' : (th.accent || '#8ecbff');
     ctx.fillStyle = titleColor;
     ctx.font = '800 56px -apple-system, "PingFang SC", sans-serif';
     ctx.fillText(r.title, W / 2, scoreY + 180);
@@ -534,7 +611,7 @@
       current = E.scanManual('manual', lastManual);
       reveal(current, true);
     } else if (h) {
-      runScan(h, { count: false });
+      runScan(h, { count: false, keyword: lastKeyword });
     }
     // 若当前在结果/对比屏则保持；runScan 会切到 result 屏
     if (screenNow && screenNow.id === 'screenCompare' && !wasManual) {
@@ -542,8 +619,365 @@
     }
   });
 
-  /* ---------- hash 路由：#/u/{username} 落地页 ---------- */
+  /* ---------- 浮层通用开关 ---------- */
+  function openOverlay(el) { if (el) el.hidden = false; }
+  function closeOverlay(el) { if (el) el.hidden = true; }
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => {
+      if (e.target === ov) ov.hidden = true; // 点击遮罩关闭
+    });
+  });
+  document.querySelectorAll('[data-close-overlay]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-close-overlay');
+      const ov = $('#' + id);
+      if (ov) ov.hidden = true;
+    });
+  });
+
+  /* ---------- 设置面板（第 6 项：音效/震动开关，默认开） ---------- */
+  function syncSwitches() {
+    const p = XPM.pref.get();
+    els.soundSwitch.checked = p.sound;
+    els.vibrateSwitch.checked = p.vibrate;
+  }
+  els.settingsBtn.addEventListener('click', () => { syncSwitches(); openOverlay(els.settingsOverlay); });
+  els.soundSwitch.addEventListener('change', () => {
+    XPM.pref.set({ sound: els.soundSwitch.checked });
+    if (els.soundSwitch.checked) XPM.sound.play('tap');
+  });
+  els.vibrateSwitch.addEventListener('change', () => {
+    XPM.pref.set({ vibrate: els.vibrateSwitch.checked });
+    if (els.vibrateSwitch.checked) XPM.sound.vibrate(30);
+  });
+
+  /* ---------- 挑战链（第 1 项） ---------- */
+  const CH_KEY = 'xpm:challenges';
+  function chList() { try { return JSON.parse(localStorage.getItem(CH_KEY) || '[]'); } catch (e) { return []; } }
+  function chSave(list) { localStorage.setItem(CH_KEY, JSON.stringify(list)); }
+  function chLinkFor(id) {
+    return location.origin + location.pathname + location.search + '#/challenge/' + id;
+  }
+  function chStatusLabel(s) {
+    return s === 'done' ? T('challenge.responded') : T('challenge.pending');
+  }
+  function renderChMine() {
+    const list = chList().slice().reverse();
+    els.challengeMineEmpty.hidden = list.length > 0;
+    els.challengeMine.innerHTML = '';
+    list.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'ch-mine__item';
+      const left = document.createElement('div');
+      left.style.cssText = 'flex:1;min-width:0;';
+      const a = document.createElement('a');
+      a.href = chLinkFor(it.id);
+      a.textContent = '@' + it.challenger + ' → @' + it.target;
+      a.addEventListener('click', ev => {
+        ev.preventDefault();
+        location.hash = '#/challenge/' + it.id;
+      });
+      const time = document.createElement('div');
+      time.style.cssText = 'font-size:11px;color:var(--text-tertiary,#98989d);margin-top:2px;';
+      time.textContent = new Date(it.created_at).toLocaleString();
+      left.append(a, time);
+      const st = document.createElement('span');
+      st.className = 'ch-mine__status ch-mine__status--' + it.status;
+      st.textContent = chStatusLabel(it.status);
+      row.append(left, st);
+      els.challengeMine.appendChild(row);
+    });
+  }
+  els.challengeBtn.addEventListener('click', () => {
+    if (!current) return;
+    els.challengeTarget.value = '';
+    els.challengeLinkBox.hidden = true;
+    renderChMine();
+    openOverlay(els.challengeOverlay);
+  });
+  els.challengeForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!current) return;
+    const target = E.parseHandle(els.challengeTarget.value);
+    if (!target) { els.challengeTarget.style.borderColor = 'var(--danger)'; setTimeout(() => els.challengeTarget.style.borderColor = '', 1200); return; }
+    const payload = {
+      challenger: current.username,
+      challenger_score: Math.round(current.score * 10) / 10,
+      challenger_title: current.title,
+      target: target
+    };
+    els.challengeBtn.disabled = true;
+    E.apiChallengeCreate(payload).then(res => {
+      els.challengeBtn.disabled = false;
+      if (!res.ok) { return; }
+      const it = { id: res.id, challenger: payload.challenger, target: payload.target, status: 'open', created_at: Date.now() };
+      const list = chList(); list.push(it); chSave(list);
+      renderChMine();
+      els.challengeLinkBox.hidden = false;
+      els.challengeLink.value = chLinkFor(res.id);
+      XPM.sound.play('tap');
+    }).catch(() => { els.challengeBtn.disabled = false; });
+  });
+  els.challengeCopyBtn.addEventListener('click', () => {
+    if (!els.challengeLink.value) return;
+    copyText(els.challengeLink.value);
+  });
+
+  /* 挑战落地：应战闭环 */
+  let chLanding = null; // 当前落地挑战数据
+  function showChallengeLanding(id) {
+    els.challengeLandingBody.innerHTML = '';
+    els.challengeLandingBody.appendChild(loadingNode());
+    openOverlay(els.challengeLandingOverlay);
+    E.apiChallengeGet(id).then(res => {
+      if (!res.ok) {
+        els.challengeLandingBody.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'sheet__empty';
+        p.textContent = T('fail.not_found');
+        els.challengeLandingBody.appendChild(p);
+        return;
+      }
+      chLanding = res;
+      renderChallengeLanding(res);
+    }).catch(() => {
+      els.challengeLandingBody.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'sheet__empty';
+      p.textContent = T('fail.fetch');
+      els.challengeLandingBody.appendChild(p);
+    });
+  }
+  function loadingNode() {
+    const p = document.createElement('p');
+    p.className = 'sheet__empty';
+    p.textContent = T('status.fetching');
+    return p;
+  }
+  function renderChallengeLanding(ch) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ch-land';
+    const from = document.createElement('p');
+    from.className = 'ch-land__from';
+    from.textContent = T('challenge.from', { u: '@' + ch.challenger });
+    const score = document.createElement('p');
+    score.className = 'ch-land__score';
+    score.textContent = ch.challenger_score;
+    const title = document.createElement('p');
+    title.className = 'ch-land__title';
+    title.textContent = ch.challenger_title;
+    wrap.append(from, score, title);
+
+    if (ch.status === 'done') {
+      const div = document.createElement('div');
+      div.className = 'ch-land__divider';
+      div.textContent = 'VS';
+      const verdict = document.createElement('p');
+      verdict.className = 'ch-land__verdict';
+      const a = ch.challenger_score, b = ch.responder_score;
+      verdict.textContent = a === b ? T('challenge.resultTie', { u: '@' + ch.challenger })
+        : (b > a ? T('challenge.resultWin', { u: '@' + ch.challenger }) : T('challenge.resultLose', { u: '@' + ch.challenger }));
+      const sub = document.createElement('p');
+      sub.className = 'ch-land__sub';
+      sub.textContent = '@' + ch.responder + ' · ' + ch.responder_title + ' · ' + b;
+      wrap.append(div, verdict, sub);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'ch-land__divider';
+      div.textContent = 'VS';
+      const form = document.createElement('form');
+      form.className = 'ch-land__form';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = T('challenge.acceptPh');
+      input.autocomplete = 'off';
+      input.setAttribute('data-i18n-ph', 'challenge.acceptPh');
+      const btn = document.createElement('button');
+      btn.type = 'submit';
+      btn.className = 'btn btn--primary';
+      btn.textContent = T('challenge.acceptBtn');
+      const result = document.createElement('p');
+      result.className = 'ch-land__result';
+      form.append(input, btn, result);
+      form.addEventListener('submit', ev => {
+        ev.preventDefault();
+        const handle = E.parseHandle(input.value);
+        if (!handle) { input.style.borderColor = 'var(--danger)'; setTimeout(() => input.style.borderColor = '', 1200); return; }
+        if (handle.toLowerCase() === ch.challenger.toLowerCase()) { result.textContent = T('vs.self'); return; }
+        btn.disabled = true;
+        result.textContent = T('status.fetching');
+        E.scan(handle).then(scanRes => {
+          if (!scanRes.ok) { btn.disabled = false; result.textContent = T('fail.fetch'); return; }
+          const r = scanRes.result;
+          E.apiChallengeRespond(ch.id, {
+            responder: r.username,
+            responder_score: Math.round(r.score * 10) / 10,
+            responder_title: r.title
+          }).then(resp => {
+            btn.disabled = false;
+            if (!resp.ok) { result.textContent = T('fail.fetch'); return; }
+            // 更新本地发起记录状态
+            const list = chList();
+            const mine = list.find(x => x.id === ch.id);
+            if (mine) { mine.status = 'done'; chSave(list); }
+            result.textContent = '';
+            renderChallengeLanding(Object.assign({}, ch, resp));
+          }).catch(() => { btn.disabled = false; result.textContent = T('fail.fetch'); });
+        }).catch(() => { btn.disabled = false; result.textContent = T('fail.fetch'); });
+      });
+      wrap.append(div, form);
+    }
+    els.challengeLandingBody.innerHTML = '';
+    els.challengeLandingBody.appendChild(wrap);
+  }
+
+  /* ---------- 战力周报趋势（第 4 项） ---------- */
+  function drawTrendChart(points) {
+    const cv = els.trendChart;
+    const ctx = cv.getContext('2d');
+    const W = 560, H = 200, pad = 12;
+    cv.width = W; cv.height = H;
+    ctx.clearRect(0, 0, W, H);
+    const scores = points.map(p => p.score);
+    const min = Math.min.apply(null, scores);
+    const max = Math.max.apply(null, scores);
+    const range = Math.max(1, max - min);
+    const dark = document.documentElement.dataset.theme === 'dark';
+    const gridCol = dark ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)';
+    const lineCol = '#0a84ff';
+    const fillCol = 'rgba(10,132,255,.16)';
+    // 网格
+    ctx.strokeStyle = gridCol; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad + (H - pad * 2) * i / 4;
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+    }
+    // 折线
+    const n = points.length;
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      const x = pad + (W - pad * 2) * (n === 1 ? 0.5 : i / (n - 1));
+      const y = pad + (H - pad * 2) * (1 - (p.score - min) / range);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = lineCol; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
+    // 面积
+    ctx.lineTo(pad + (W - pad * 2) * (n === 1 ? 0.5 : (n - 1) / (n - 1)), H - pad);
+    ctx.lineTo(pad + (W - pad * 2) * (n === 1 ? 0.5 : 0), H - pad);
+    ctx.closePath();
+    ctx.fillStyle = fillCol; ctx.fill();
+    // 数据点
+    points.forEach((p, i) => {
+      const x = pad + (W - pad * 2) * (n === 1 ? 0.5 : i / (n - 1));
+      const y = pad + (H - pad * 2) * (1 - (p.score - min) / range);
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = lineCol; ctx.lineWidth = 2; ctx.stroke();
+    });
+  }
+  els.trendBtn.addEventListener('click', () => {
+    if (!current) return;
+    els.trendChart.hidden = true;
+    els.trendEmpty.hidden = true;
+    els.trendList.hidden = true;
+    els.trendList.innerHTML = '';
+    openOverlay(els.trendOverlay);
+    E.apiTrend(current.username).then(res => {
+      if (!res.ok || !res.points || !res.points.length) { els.trendEmpty.hidden = false; return; }
+      drawTrendChart(res.points);
+      els.trendChart.hidden = false;
+      const list = res.points.slice().reverse(); // 最新在前
+      list.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'trend-item';
+        const t = document.createElement('span');
+        t.className = 'trend-item__time';
+        t.textContent = new Date(p.t).toLocaleString();
+        const s = document.createElement('span');
+        s.className = 'trend-item__score';
+        s.textContent = p.score;
+        row.append(t, s);
+        els.trendList.appendChild(row);
+      });
+      els.trendList.hidden = false;
+    }).catch(() => { els.trendEmpty.hidden = false; });
+  });
+
+  /* ---------- 趣味榜单（第 7 项） ---------- */
+  function renderLeaderboard(list) {
+    els.lbList.innerHTML = '';
+    els.lbEmpty.hidden = list.length > 0;
+    list.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.className = 'lb-row';
+      const rank = document.createElement('span');
+      rank.className = 'lb-row__rank';
+      rank.textContent = i + 1;
+      const body = document.createElement('div');
+      body.className = 'lb-row__body';
+      const handle = document.createElement('p');
+      handle.className = 'lb-row__handle';
+      handle.textContent = '@' + it.username;
+      const meta = document.createElement('p');
+      meta.className = 'lb-row__meta';
+      meta.textContent = T('lb.best') + ' ' + it.best + ' · ' + it.first_scanned;
+      body.append(handle, meta);
+      const count = document.createElement('span');
+      count.className = 'lb-row__count';
+      count.textContent = it.scans + '×';
+      row.append(rank, body, count);
+      els.lbList.appendChild(row);
+    });
+  }
+  els.lbBtn.addEventListener('click', () => {
+    els.lbList.innerHTML = '';
+    els.lbEmpty.hidden = true;
+    openOverlay(els.lbOverlay);
+    E.apiLeaderboard().then(res => {
+      if (!res.ok) { els.lbEmpty.hidden = false; return; }
+      renderLeaderboard(res.list || []);
+    }).catch(() => { els.lbEmpty.hidden = false; });
+  });
+
+  /* ---------- 彩蛋图鉴（第 2 项：收集展示） ---------- */
+  function renderCollection() {
+    const EGGS = XPM.EGGS || [];
+    const total = EGGS.length;
+    const got = EGGS.filter(e => eggUnlocked(e.id)).length;
+    els.collectionProgress.textContent = T('collection.progress', { a: got, b: total });
+    els.collectionEmpty.hidden = total > 0;
+    els.collectionGrid.innerHTML = '';
+    EGGS.forEach(e => {
+      const cell = document.createElement('div');
+      cell.className = 'egg-cell' + (eggUnlocked(e.id) ? ' egg-cell--got' : '');
+      const emoji = document.createElement('div');
+      emoji.className = 'egg-cell__emoji';
+      emoji.textContent = eggUnlocked(e.id) ? (e.emoji || '🥚') : '🔒';
+      const name = document.createElement('p');
+      name.className = 'egg-cell__name';
+      name.textContent = eggUnlocked(e.id) ? L(e.badge) : T('collection.locked');
+      const acc = document.createElement('p');
+      acc.className = 'egg-cell__acc';
+      acc.textContent = eggUnlocked(e.id) ? '@' + (e.handles[0] || '?') : '???';
+      const state = document.createElement('p');
+      state.className = 'egg-cell__state';
+      state.textContent = eggUnlocked(e.id) ? T('collection.unlocked') : T('collection.locked');
+      cell.append(emoji, name, acc, state);
+      els.collectionGrid.appendChild(cell);
+    });
+  }
+  els.collectionBtn.addEventListener('click', () => {
+    renderCollection();
+    openOverlay(els.collectionOverlay);
+  });
+
+  /* ---------- hash 路由：#/u/{username} 与 #/challenge/{id} ---------- */
   function route() {
+    const cm = location.hash.match(/^#\/challenge\/([A-Za-z0-9_-]+)$/i);
+    if (cm) {
+      showChallengeLanding(cm[1]);
+      return;
+    }
     const m = location.hash.match(/^#\/u\/([A-Za-z0-9_]{1,15})$/i);
     if (m) {
       const handle = m[1];

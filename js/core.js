@@ -2,7 +2,8 @@
    X战力镜 · core.js  （前后端共用纯逻辑，无 DOM / localStorage 依赖）
    浏览器：<script src="js/data.js"> 后加载，挂 window.XPM.core
    Node  ：const XPM = require('./data.js'); const core = require('./core.js');
-   包含：账号解析 / 确定性随机 / 数值格式化 / 四维算分 / 段位 / 主称号 / 特称 / 评语 / 分享文案
+   包含：账号解析 / 确定性随机 / 数值格式化 / 四维算分 / 段位 / 主称号(盲盒稀有度) /
+         特称 / 彩蛋 / 海报主题 / 评语 / 分享文案
    多语言：core.setLang('zh' | 'en') 切换输出语言；默认 zh
    ============================================================ */
 (function (root, factory) {
@@ -159,7 +160,41 @@
     return L({ zh: '新号', en: 'Newbie' });
   };
 
-  /* ---------- 主称号拼接 ---------- */
+  /* ---------- 稀有度（称号盲盒 · 第 3 项） ---------- */
+  C.rarityOf = function (id) {
+    for (const r of XPM.RARITIES || []) if (r.id === id) return r;
+    return (XPM.RARITIES || [])[0];
+  };
+  C.rollRarity = function (rnd, score) {
+    const w = XPM.rarityWeights(score);
+    let r = rnd() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return (XPM.RARITIES || [])[i]; }
+    return (XPM.RARITIES || [])[0];
+  };
+  /* 从五档词库按稀有度抽一个梗词条（附带来源分类） */
+  C.rollGag = function (rnd, rarity) {
+    const pool = [];
+    if (rarity.id === 'legendary') {
+      for (const it of (XPM.WORDS.legend || [])) pool.push({ text: it, kind: 'legend' });
+      if (pool.length) return pool[Math.floor(rnd() * pool.length)];
+    }
+    const cats = ['volume', 'style', 'play', 'struct'];
+    for (const cat of cats) {
+      for (const it of (XPM.WORDS[cat] || [])) {
+        if ((it.rarity || 'common') === rarity.id) pool.push({ text: it, kind: cat });
+      }
+    }
+    if (!pool.length) {
+      for (const cat of cats) {
+        for (const it of (XPM.WORDS[cat] || [])) {
+          if ((it.rarity || 'common') === 'common') pool.push({ text: it, kind: cat });
+        }
+      }
+    }
+    return pool[Math.floor(rnd() * pool.length)];
+  };
+
+  /* ---------- 主称号拼接（盲盒版，可 reroll） ---------- */
   const FRAG = {
     '转发中枢': { zh: '转发中枢', en: 'Retweet Hub' },
     '对线':     { zh: '对线', en: 'Duelist' },
@@ -167,15 +202,17 @@
     '来而不往': { zh: '来而不往', en: 'No Reciprocity' },
     '高台喊话': { zh: '高台喊话', en: 'Sermonizer' }
   };
-  C.buildTitle = function (p, c) {
-    const f = c.features;
-    const rnd = C.seeded('title:' + p.handle.toLowerCase() + ':' + Math.floor(c.score / 8));
+  C.buildTitleFull = function (p, c, opts) {
+    const f = c.features || {};
+    const salt = (opts && opts.reroll) ? (':' + opts.reroll) : '';
+    const rnd = C.seeded('title:' + p.handle.toLowerCase() + ':' + Math.floor(c.score / 8) + salt);
+    const rarity = C.rollRarity(rnd, c.score);
+    const gag = C.rollGag(rnd, rarity);
     const W = XPM.WORDS;
 
     const volW = L(f.highFollowers ? W.volume[4 + Math.floor(rnd() * 2)] : W.volume[Math.floor(rnd() * 3)]);
     const styleW = L(pick(rnd, W.style));
     const playW = L(pick(rnd, W.play));
-    const structW = L(pick(rnd, W.struct));
 
     const rtHigh = f.retweetRatio >= 0.5;
     const repHigh = f.replyRatio >= 0.4;
@@ -183,18 +220,39 @@
     const ratioLow = f.following > f.followers;
 
     const parts = [];
-    if (rtHigh) parts.push(L(FRAG['转发中枢']));
+    // 核心梗：gag 为 play 类直接打头，否则沿用行为分支
+    if (gag.kind === 'play') parts.push(L(gag.text));
+    else if (rtHigh) parts.push(L(FRAG['转发中枢']));
     else if (repHigh) parts.push(L(FRAG['对线']));
     else if (silent) parts.push(L(FRAG['哑火']));
     else parts.push(playW);
 
-    if (ratioLow) parts.push(L(FRAG['来而不往']));
+    // 第二段：style / struct 类 gag 优先，否则沿用关系分支
+    if (gag.kind === 'style' || gag.kind === 'struct') parts.push(L(gag.text));
+    else if (ratioLow) parts.push(L(FRAG['来而不往']));
     else if (f.verified) parts.push(L(FRAG['高台喊话']));
     else parts.push(styleW);
 
-    if (c.score >= 87) parts.unshift(volW);
+    // 首位：volume / legend 类 gag 置顶，大号补体量词
+    if (gag.kind === 'volume' || gag.kind === 'legend') parts.unshift(L(gag.text));
+    else if (c.score >= 87) parts.unshift(volW);
 
-    return parts.length > 3 ? parts.slice(0, 3).join(LANG === 'en' ? ' · ' : '·') : parts.join(LANG === 'en' ? ' · ' : '·');
+    return {
+      title: (parts.length > 3 ? parts.slice(0, 3) : parts).join(LANG === 'en' ? ' · ' : '·'),
+      rarity: rarity.id,
+      gag: L(gag.text)
+    };
+  };
+  /* 兼容旧调用：仅返回标题字符串 */
+  C.buildTitle = function (p, c) {
+    return C.buildTitleFull(p, c, {}).title;
+  };
+  /* 换梗（盲盒 reroll）：基于已有 result 重新 roll 一个称号 */
+  C.rerollTitle = function (result, salt) {
+    const f = result._features || {};
+    const fakeP = { handle: result.username || 'x' };
+    const fakeC = { score: result.score, features: f };
+    return C.buildTitleFull(fakeP, fakeC, { reroll: salt || 'x' });
   };
 
   /* ---------- 特称 ---------- */
@@ -204,9 +262,69 @@
       deadBurst: c.features.deadBurst
     });
     for (const s of XPM.SPECIALS) {
-      try { if (s.cond(r)) return { id: s.id, title: L(s.title) }; } catch (e) { /* 忽略单条异常 */ }
+      try { if (s.cond(r)) return { id: s.id, title: L(s.title), rarity: s.rarity || 'rare' }; } catch (e) { /* 忽略单条异常 */ }
     }
     return null;
+  };
+
+  /* ---------- 隐藏彩蛋（第 2 项：账号 + 关键词 + 小概率） ---------- */
+  C.eggOf = function (handle, keyword) {
+    const h = String(handle || '').toLowerCase();
+    const kw = String(keyword || '').toLowerCase();
+    if (!kw) return null;   // 彩蛋必须「账号 + 关键词」同时满足，无关键词不判定
+    const eggs = XPM.EGGS || [];
+    for (const e of eggs) {
+      if (!e.handles || e.handles.indexOf(h) < 0) continue;
+      if (e.keywords && e.keywords.length) {
+        let hit = false;
+        for (const k of e.keywords) {
+          if (kw.indexOf(String(k).toLowerCase()) >= 0) { hit = true; break; }
+        }
+        if (!hit) continue;
+      }
+      if (Math.random() >= (e.chance || 0.05)) continue;
+      return { id: e.id, title: L(e.title), badge: L(e.badge), rarity: e.rarity || 'rare' };
+    }
+    return null;
+  };
+
+  /* ---------- 海报主题（第 5 项：段位配色 + 彩蛋/稀有度联动 + 限定随机） ---------- */
+  C.posterTheme = function (r) {
+    const s = r.score;
+    const tiers = [
+      { min: 105, bg: ['#1a1005', '#3a2408'], accent: '#ffd60a', name: { zh: '传说·鎏金', en: 'Legend Gold' } },
+      { min: 97,  bg: ['#0d1230', '#1d1a4e'], accent: '#8ecbff', name: { zh: '大V·星蓝', en: 'Mega Blue' } },
+      { min: 87,  bg: ['#101c36', '#122a52'], accent: '#5ac8fa', name: { zh: '中V·靛蓝', en: 'Rising Indigo' } },
+      { min: 72,  bg: ['#0d2b26', '#0f3d33'], accent: '#40e0d0', name: { zh: '名气·青碧', en: 'Known Teal' } },
+      { min: 55,  bg: ['#0f2413', '#143318'], accent: '#30d158', name: { zh: '熟脸·青绿', en: 'Regular Green' } },
+      { min: 32,  bg: ['#261505', '#33200a'], accent: '#ff9f0a', name: { zh: '街区·暖橙', en: 'Local Orange' } },
+      { min: 18,  bg: ['#1c1c22', '#26262e'], accent: '#8e8e93', name: { zh: '居民·雾灰', en: 'Resident Gray' } },
+      { min: 0,   bg: ['#17171c', '#202027'], accent: '#6e6e73', name: { zh: '新号·碳灰', en: 'Newbie Charcoal' } }
+    ];
+    let t = tiers.find(x => s >= x.min) || tiers[tiers.length - 1];
+    let theme = { bg0: t.bg[0], bg1: t.bg[1], accent: t.accent, name: t.name, limited: false, label: null };
+
+    // 彩蛋联动 > 稀有度联动 > 段位
+    if (r.egg_id) {
+      theme = { bg0: '#2b0a0a', bg1: '#5a1a06', accent: '#ffd60a', name: { zh: '彩蛋·鎏金', en: 'Egg Gold' }, limited: false, label: null };
+    } else if (r.rarity === 'legendary') {
+      theme = { bg0: '#241402', bg1: '#4a2a05', accent: '#ffd60a', name: { zh: '传说·鎏金', en: 'Legend Gold' }, limited: false, label: null };
+    } else if (r.rarity === 'epic') {
+      theme = { bg0: '#140a24', bg1: '#2a1248', accent: '#bf5af2', name: { zh: '史诗·紫夜', en: 'Epic Night' }, limited: false, label: null };
+    }
+
+    // 限定随机（每天一换，偶尔出现，增加收集感）
+    const rnd = C.seeded('poster:' + String(r.username || '').toLowerCase() + ':' + new Date().toISOString().slice(0, 10));
+    if (s >= 72 && rnd() < 0.06) {
+      const limited = [
+        { bg0: '#1a0533', bg1: '#3d0a5e', accent: '#ff375f', name: { zh: '限定·霓虹', en: 'Limited Neon' }, label: { zh: '限定皮肤 · 霓虹', en: 'Limited Skin · Neon' } },
+        { bg0: '#001a1f', bg1: '#00343c', accent: '#30d0d0', name: { zh: '限定·赛博青', en: 'Limited Cyber' }, label: { zh: '限定皮肤 · 赛博青', en: 'Limited Skin · Cyber' } },
+        { bg0: '#1f0f02', bg1: '#4a2406', accent: '#ff9f0a', name: { zh: '限定·黄昏', en: 'Limited Dusk' }, label: { zh: '限定皮肤 · 黄昏', en: 'Limited Skin · Dusk' } },
+        { bg0: '#06201f', bg1: '#103a38', accent: '#64d2ff', name: { zh: '限定·极光', en: 'Limited Aurora' }, label: { zh: '限定皮肤 · 极光', en: 'Limited Skin · Aurora' } }
+      ];
+      theme = Object.assign({}, limited[Math.floor(rnd() * limited.length)], { limited: true });
+    }
+    return theme;
   };
 
   /* ---------- 评语保底（规则生成，AI 未接入时使用） ---------- */
@@ -285,18 +403,22 @@
   /* ---------- 从原始档案+近帖组装 scan 结果（后端与浏览器 mock 共用） ----------
      raw: { handle, name, avatar|null, avatarHue|null, followers, following, createdDays,
             statusesCount, verified, silentDays, posts:[{likes,rt,rep,isRt,isReply}] }
-     partial: 是否残局（近况未计入） ---------- */
+     opts: { partial, shareBase, keyword }  keyword 为原始输入，用于彩蛋判定 ---------- */
   C.buildResult = function (raw, opts) {
+    opts = opts || {};
     const p = Object.assign({ handle: raw.handle || 'manual', name: raw.name || L({ zh: '手填选手', en: 'Manual Player' }),
       avatar: raw.avatar || null, avatarHue: raw.avatarHue != null ? raw.avatarHue : 210 }, raw);
     const c = C.compute(p, opts);
     const special = C.specialOf(p, c);
-    const title = special ? special.title : C.buildTitle(p, c);
+    const egg = C.eggOf(p.handle, opts.keyword);
+    const hd = C.buildTitleFull(p, c, {});
+    const rarity = egg ? egg.rarity : (special ? special.rarity : hd.rarity);
+    const title = egg ? egg.title : (special ? special.title : hd.title);
     const ai = C.buildComment(p, c);
     const partial = !!(opts && opts.partial);
     const base = (opts && opts.shareBase) || '';
 
-    return {
+    const result = {
       username: p.handle,
       name: p.name,
       avatar: p.avatar,
@@ -308,6 +430,8 @@
       score: c.score,
       tier: C.tierOf(c.score),
       title,
+      rarity,
+      gag: egg ? null : (special ? null : hd.gag),
       alias: ai.alias,
       comment: ai.comment,
       share_clause: ai.share_clause,
@@ -315,20 +439,28 @@
               burst: Math.round(c.dims.burst * 100), activity: Math.round(c.dims.activity * 100) },
       special_title: special ? special.title : null,
       special_id: special ? special.id : null,
+      egg_id: egg ? egg.id : null,
+      egg_title: egg ? egg.title : null,
+      egg_badge: egg ? egg.badge : null,
+      egg_rarity: egg ? egg.rarity : null,
       partial,
-      share_url: base + '#/u/' + p.handle
+      share_url: base + '#/u/' + p.handle,
+      _features: c.features
     };
+    result.theme = C.posterTheme(result);
+    return result;
   };
 
   /* ---------- 分享文案 ---------- */
   C.shareText = function (result, forSelf) {
+    const badge = result.egg_badge ? ' · ' + result.egg_badge : '';
     if (LANG === 'en') {
       const who = forSelf ? 'My' : '@' + result.username + "'s";
-      return who + ' X Power is ' + result.score + ' (' + result.tier + ' · ' + result.title + '). ' +
+      return who + ' X Power is ' + result.score + ' (' + result.tier + ' · ' + result.title + badge + '). ' +
              result.share_clause + '. Try yours: ' + result.share_url;
     }
     const who = forSelf ? '我的' : '@' + result.username + ' 的';
-    return `${who}X战力是 ${result.score}（${result.tier}·${result.title}）。${result.share_clause}。你也来测：${result.share_url}`;
+    return `${who}X战力是 ${result.score}（${result.tier}·${result.title}${badge}）。${result.share_clause}。你也来测：${result.share_url}`;
   };
 
   return C;

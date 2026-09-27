@@ -31,6 +31,10 @@
   E.buildComment = core.buildComment;
   E.shareText = core.shareText;
   E.buildResult = core.buildResult;
+  E.rarityOf = core.rarityOf;
+  E.rerollTitle = core.rerollTitle;
+  E.eggOf = core.eggOf;
+  E.posterTheme = core.posterTheme;
 
   /* ---------- 本地演示取数（mock，真实后端接入后不再走到此分支） ---------- */
   E.fetchProfile = function (handle) {
@@ -137,19 +141,21 @@
   };
 
   /* ---------- 完整 scan：真实模式走后端，本地模式走 mock ---------- */
-  E.scan = function (handle) {
-    if (E.apiBase) return E.scanRemote(handle);
-    return E.scanLocal(handle);
+  E.scan = function (handle, opts) {
+    if (E.apiBase) return E.scanRemote(handle, opts);
+    return E.scanLocal(handle, opts);
   };
 
   /* ---------- 真实后端取数 ----------
-     POST {apiBase}/api/scan  {q: handle}
+     POST {apiBase}/api/scan  {q: handle, lang, keyword}
      -> { ok: true, from_cache, quota_left, result } 或 { ok: false, fail, result: null } */
-  E.scanRemote = function (handle) {
+  E.scanRemote = function (handle, opts) {
+    const body = { q: handle, lang: core.getLang() || 'zh' };
+    if (opts && opts.keyword) body.keyword = String(opts.keyword);
     return fetch(E.apiBase + '/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: handle, lang: core.getLang() || 'zh' })
+      body: JSON.stringify(body)
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
@@ -165,7 +171,7 @@
   };
 
   /* ---------- 本地 mock 测算（含缓存/配额/延迟模拟） ---------- */
-  E.scanLocal = function (handle) {
+  E.scanLocal = function (handle, opts) {
     const cached = E.getCache(handle);
     if (cached) return Promise.resolve({ ok: true, fromCache: true, result: cached });
 
@@ -174,9 +180,35 @@
       return new Promise(res => setTimeout(() =>
         res({ ok: false, fail: 'private', result: null }), 1400));
     }
-    const result = core.buildResult(p, { shareBase: location.origin + location.pathname });
+    const result = core.buildResult(p, {
+      shareBase: location.origin + location.pathname,
+      keyword: opts && opts.keyword
+    });
     E.setCache(handle, result);
     return new Promise(res => setTimeout(() => res({ ok: true, fromCache: false, result }), 1500 + Math.random() * 1800));
+  };
+
+  /* ---------- 趣味功能后端 API（第 1/4/7 项；本地 mock 模式返回空态） ---------- */
+  function apiFetch(path, init) {
+    if (!E.apiBase) return Promise.resolve(null);
+    return fetch(E.apiBase + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, init || {}))
+      .then(r => r.json())
+      .catch(() => null);
+  }
+  E.apiChallengeCreate = function (payload) {
+    return apiFetch('/api/challenge', { method: 'POST', body: JSON.stringify(payload) });
+  };
+  E.apiChallengeGet = function (id) {
+    return apiFetch('/api/challenge/' + encodeURIComponent(id));
+  };
+  E.apiChallengeRespond = function (id, payload) {
+    return apiFetch('/api/challenge/' + encodeURIComponent(id) + '/respond', { method: 'POST', body: JSON.stringify(payload) });
+  };
+  E.apiTrend = function (handle) {
+    return apiFetch('/api/trend/' + encodeURIComponent(handle));
+  };
+  E.apiLeaderboard = function () {
+    return apiFetch('/api/leaderboard');
   };
 
   /* ---------- 手填后门 ---------- */

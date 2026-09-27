@@ -24,6 +24,13 @@
     <span class="brand__name" data-i18n="brand.name">战力镜</span>
   </a>
   <div class="topbar__right">
+    <div class="topbar__quick">
+      <button class="quick-btn" id="lbBtn" type="button" data-i18n="nav.leaderboard" data-i18n-aria="nav.leaderboard" title="榜单">榜单</button>
+      <button class="quick-btn" id="collectionBtn" type="button" data-i18n="nav.collection" data-i18n-aria="nav.collection" title="图鉴">图鉴</button>
+      <button class="quick-btn" id="settingsBtn" type="button" data-i18n-aria="nav.settings" data-i18n-title="nav.settings" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+      </button>
+    </div>
     <div class="lang-switch" role="group" aria-label="Language">
       <button class="lang-switch__btn" id="langAuto" type="button" data-lang="auto" data-i18n="lang.auto">自动</button>
       <button class="lang-switch__btn" id="langZh" type="button" data-lang="zh">中</button>
@@ -113,9 +120,14 @@
       </div>
 
       <div class="title-zone">
-        <h2 class="main-title" id="rTitle">—</h2>
+        <div class="title-zone__row">
+          <h2 class="main-title" id="rTitle">—</h2>
+          <span class="rarity-pill" id="rRarity" hidden></span>
+          <span class="egg-badge" id="rEggBadge" hidden data-i18n="egg.badgeLabel">彩蛋徽章</span>
+        </div>
         <p class="alias" id="rAlias"></p>
         <p class="special" id="rSpecial" hidden></p>
+        <button class="reroll-btn" id="rerollBtn" type="button" data-i18n="reroll.title" hidden>换一个梗</button>
       </div>
 
       <p class="comment" id="rComment">—</p>
@@ -144,6 +156,8 @@
     <div class="result-actions" id="resultActions" hidden>
       <button class="act act--primary" id="copyBtn" type="button" data-i18n="act.copy">复制文案</button>
       <button class="act" id="posterBtn" type="button" data-i18n="act.poster">生成海报</button>
+      <button class="act" id="challengeBtn" type="button" data-i18n="challenge.title">发起挑战</button>
+      <button class="act" id="trendBtn" type="button" data-i18n="trend.title">战力周报</button>
       <button class="act" id="againBtn" type="button" data-i18n="act.again">再测一个</button>
       <button class="act" id="vsBtn" type="button" data-i18n="act.vs">拉出来对比</button>
     </div>
@@ -216,19 +230,137 @@
 <!-- 彩粒容器 -->
 <div class="confetti" id="confetti" aria-hidden="true"></div>
 
+<!-- ============ 设置面板（第 6 项：音效/震动开关，默认开） ============ -->
+<div class="overlay" id="settingsOverlay" hidden>
+  <div class="sheet sheet--sm" role="dialog" aria-modal="true" aria-label="设置">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="settings.title">设置</h2>
+      <button class="sheet__close" type="button" data-overlay-close="settingsOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-row__text">
+        <p class="setting-row__name" data-i18n="settings.sound">音效</p>
+        <p class="setting-row__desc" data-i18n="settings.sound.desc">揭晓动效音效</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="soundSwitch" checked>
+        <span class="switch__track" aria-hidden="true"><i></i></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-row__text">
+        <p class="setting-row__name" data-i18n="settings.vibrate">震动</p>
+        <p class="setting-row__desc" data-i18n="settings.vibrate.desc">手机震动反馈</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="vibrateSwitch" checked>
+        <span class="switch__track" aria-hidden="true"><i></i></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 发起挑战（第 1 项：对线挑战链） ============ -->
+<div class="overlay" id="challengeOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="挑战">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="challenge.title">发起挑战</h2>
+      <button class="sheet__close" type="button" data-overlay-close="challengeOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <p class="sheet__sub" data-i18n="challenge.sub">把你的战力做成挑战链接，让对方应战</p>
+    <form class="ch-form" id="challengeForm" novalidate>
+      <div class="vs-field">
+        <span class="scan-field__prefix">@</span>
+        <input id="challengeTarget" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               data-i18n-ph="challenge.placeholder" data-i18n-aria="challenge.placeholder"
+               placeholder="被挑战账号，如 jack" aria-label="被挑战账号">
+      </div>
+      <button class="cta cta--sm" type="submit"><span class="cta__label" data-i18n="challenge.btn">生成挑战链接</span></button>
+    </form>
+    <div class="ch-link" id="challengeLinkBox" hidden>
+      <p class="ch-link__label" data-i18n="challenge.linkTitle">挑战链接</p>
+      <div class="ch-link__row">
+        <input id="challengeLink" type="text" readonly>
+        <button class="act act--primary" id="challengeCopyBtn" type="button" data-i18n="challenge.copy">复制</button>
+      </div>
+    </div>
+    <div class="ch-mine">
+      <p class="ch-mine__title" data-i18n="challenge.my">我的挑战</p>
+      <div class="ch-mine__list" id="challengeMine" hidden></div>
+      <p class="ch-mine__empty" id="challengeMineEmpty" data-i18n="challenge.empty">还没发起过挑战</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 挑战落地页（朋友点击挑战链接应战） ============ -->
+<div class="overlay" id="challengeLandingOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="挑战">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="challenge.landing">挑战</h2>
+      <button class="sheet__close" type="button" data-overlay-close="challengeLandingOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <div id="challengeLandingBody"></div>
+  </div>
+</div>
+
+<!-- ============ 战力周报趋势（第 4 项） ============ -->
+<div class="overlay" id="trendOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="周报">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="trend.title">战力周报</h2>
+      <button class="sheet__close" type="button" data-overlay-close="trendOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <p class="sheet__sub" id="trendSub" data-i18n="trend.sub">同一账号历次测试趋势（跨设备同步）</p>
+    <div class="trend-chart" id="trendChartWrap"><canvas id="trendChart" width="640" height="260"></canvas></div>
+    <p class="sheet__empty" id="trendEmpty" data-i18n="trend.empty" hidden>还没有历史记录</p>
+    <p class="sheet__hint" data-i18n="trend.record">每次新测算自动记录</p>
+    <div class="trend-list" id="trendList"></div>
+  </div>
+</div>
+
+<!-- ============ 趣味榜单（第 7 项：全局汇总） ============ -->
+<div class="overlay" id="lbOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="榜单">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="lb.title">趣味榜单</h2>
+      <button class="sheet__close" type="button" data-overlay-close="lbOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <p class="sheet__sub" data-i18n="lb.sub">全站热测账号，看谁被测最多</p>
+    <p class="sheet__empty" id="lbEmpty" data-i18n="lb.empty" hidden>榜单还是空的，来测第一发</p>
+    <div class="lb-list" id="lbList"></div>
+  </div>
+</div>
+
+<!-- ============ 彩蛋图鉴（第 2 项：收集展示） ============ -->
+<div class="overlay" id="collectionOverlay" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="图鉴">
+    <div class="sheet__head">
+      <h2 class="sheet__title" data-i18n="collection.title">彩蛋图鉴</h2>
+      <button class="sheet__close" type="button" data-overlay-close="collectionOverlay" data-i18n-aria="sheet.close" aria-label="关闭">×</button>
+    </div>
+    <p class="sheet__sub" data-i18n="collection.sub">收集隐藏彩蛋称号</p>
+    <p class="collection-progress" id="collectionProgress">0 / 0</p>
+    <p class="sheet__empty" id="collectionEmpty" data-i18n="collection.empty" hidden>还没触发过彩蛋，去试试看</p>
+    <div class="egg-grid" id="collectionGrid"></div>
+  </div>
+</div>
+
 <script>
   /* ============ 真实数据接入配置 ============
      apiBase 留空 ''        -> 本地 mock 演示模式（无需后端）
      apiBase 填后端地址      -> 真实取数模式，如 'http://192.168.1.10:8787' 或 '/api'
      后端需实现：
-       POST {apiBase}/api/scan   body {q: handle, lang: 'zh'|'en'}
+       POST {apiBase}/api/scan   body {q: handle, lang: 'zh'|'en', keyword}
        -> { ok, from_cache, quota_left, result }   result 字段见开发文档第 21 节
+       趣味接口：POST /api/challenge · GET /api/challenge/:id · POST /api/challenge/:id/respond
+                 GET /api/trend/:username · GET /api/leaderboard（均走 XPM_KV）
   ========================================= */
   window.XPM = window.XPM || {};
   window.XPM.CONFIG = { apiBase: 'https://x-power-mirror.toonyliu.workers.dev' };
 </script>
 <script src="js/data.js"></script>
 <script src="js/core.js"></script>
+<script src="js/sound.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/app.js"></script>
