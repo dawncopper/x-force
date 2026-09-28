@@ -744,7 +744,7 @@
         return;
       }
       chLanding = res;
-      renderChallengeLanding(res);
+      renderChallengeLanding(res.challenge || res);
     }).catch(() => {
       els.challengeLandingBody.innerHTML = '';
       const p = document.createElement('p');
@@ -759,7 +759,13 @@
     p.textContent = T('status.fetching');
     return p;
   }
-  function renderChallengeLanding(ch) {
+  function renderChallengeLanding(raw) {
+    const ch = Object.assign({}, raw, {
+      challenger_score: raw.challengerScore !== undefined ? raw.challengerScore : raw.challenger_score,
+      challenger_title: raw.challengerTitle !== undefined ? raw.challengerTitle : raw.challenger_title,
+      responder_score: raw.responderScore !== undefined ? raw.responderScore : raw.responder_score,
+      responder_title: raw.responderTitle !== undefined ? raw.responderTitle : raw.responder_title
+    });
     const wrap = document.createElement('div');
     wrap.className = 'ch-land';
     const from = document.createElement('p');
@@ -826,7 +832,7 @@
             const mine = list.find(x => x.id === ch.id);
             if (mine) { mine.status = 'done'; chSave(list); }
             result.textContent = '';
-            renderChallengeLanding(Object.assign({}, ch, resp));
+            renderChallengeLanding(Object.assign({}, ch, resp.challenge || resp));
           }).catch(() => { btn.disabled = false; result.textContent = T('fail.fetch'); });
         }).catch(() => { btn.disabled = false; result.textContent = T('fail.fetch'); });
       });
