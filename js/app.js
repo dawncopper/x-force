@@ -565,7 +565,7 @@
     ctx.fillText(T('poster.scoreLabel'), W / 2, scoreY + 56);
 
     // 主称号（视觉中心大字，联动主题 accent）
-    const titleColor = r.special_title ? '#ffd60a' : (th.accent || '#8ecbff');
+    const titleColor = r.special_title ? '#ffd60a' : '#8ecbff';
     ctx.fillStyle = titleColor;
     ctx.font = '800 56px -apple-system, "PingFang SC", sans-serif';
     ctx.fillText(r.title, W / 2, scoreY + 180);
