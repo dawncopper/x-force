@@ -922,14 +922,14 @@
       body.className = 'lb-row__body';
       const handle = document.createElement('p');
       handle.className = 'lb-row__handle';
-      handle.textContent = '@' + it.username;
+      handle.textContent = '@' + it.handle;
       const meta = document.createElement('p');
       meta.className = 'lb-row__meta';
-      meta.textContent = T('lb.best') + ' ' + it.best + ' · ' + it.first_scanned;
+      meta.textContent = T('lb.best') + ' ' + it.maxScore + ' · ' + T('lb.scans') + ' ' + it.count;
       body.append(handle, meta);
       const count = document.createElement('span');
       count.className = 'lb-row__count';
-      count.textContent = it.scans + '×';
+      count.textContent = it.count + '×';
       row.append(rank, body, count);
       els.lbList.appendChild(row);
     });
