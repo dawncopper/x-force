@@ -7,7 +7,7 @@
 <title data-i18n="doc.title">X战力镜 · 输入账号，查看战力</title>
 <meta name="description" content="输入一个 X 账号，8 秒内给出可晒的战力值、个性称号和一句短评。公开数据，仅供娱乐对线。" data-i18n-meta="doc.desc">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="css/style.css?v=20260928e">
+<link rel="stylesheet" href="css/style.css?v=20260929a">
 </head>
 <body>
 
@@ -132,6 +132,18 @@
       </div>
 
       <p class="comment" id="rComment">—</p>
+
+      <!-- 擦边值（B 画像为主 A 词表为辅 · 娱乐向） -->
+      <div class="edgy-card" id="rEdgy" hidden>
+        <div class="edgy-card__head">
+          <span class="edgy-card__label" data-i18n="edgy.label">擦边值</span>
+          <span class="edgy-card__tier" id="rEdgyTier"></span>
+          <span class="edgy-card__score" id="rEdgyScore">—</span>
+        </div>
+        <div class="edgy-bar"><i id="rEdgyBar"></i></div>
+        <p class="edgy-card__verdict" id="rEdgyVerdict"></p>
+        <p class="edgy-card__hint" id="rEdgyHint" data-i18n="edgy.hint" hidden>bio 疑似引流</p>
+      </div>
 
       <div class="dims" id="rDims">
         <div class="dim" data-dim="volume">
@@ -359,11 +371,11 @@
   window.XPM = window.XPM || {};
   window.XPM.CONFIG = { apiBase: 'https://x-power-mirror.toonyliu.workers.dev' };
 </script>
-<script src="js/data.js?v=20260928e"></script>
-<script src="js/core.js?v=20260928e"></script>
-<script src="js/sound.js?v=20260928e"></script>
-<script src="js/engine.js?v=20260928e"></script>
-<script src="js/i18n.js?v=20260928e"></script>
-<script src="js/app.js?v=20260928e"></script>
+<script src="js/data.js?v=20260929a"></script>
+<script src="js/core.js?v=20260929a"></script>
+<script src="js/sound.js?v=20260929a"></script>
+<script src="js/engine.js?v=20260929a"></script>
+<script src="js/i18n.js?v=20260929a"></script>
+<script src="js/app.js?v=20260929a"></script>
 </body>
 </html>

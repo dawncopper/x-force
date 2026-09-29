@@ -400,6 +400,77 @@
     return L(ALIAS[pool[Math.floor(C.seeded('alias:' + p.handle)() * pool.length)]]);
   }
 
+  /* ---------- 擦边值（娱乐向账号画像测试 · B画像为主 A词表为辅） ----------
+     输入 p: { bio, name, avatar, followers, following, createdDays, statusesCount, verified, handle }
+     A 词表扫描 bio+name（重/中/轻三档加权，封顶 60）
+     B 画像信号（引流链/无头像/新号/异常涨粉/粉关比/认证/体量，-20 ~ +32）
+     输出 { score(0-100), tier, verdict, hint } ---------- */
+  const EDGY_WORDS = {
+    heavy: ['约炮', '裸聊', '裸照', '全裸', '涩图', '色图', '福利姬', '原味', '丝袜', '内衣', '私房照', '大尺度', '私密', 'nsfw', 'onlyfans', 'lewd', 'explicit', 'porn', 'nude'],
+    mid: ['撩', '暗示', '欲', '性感', '身材', '写真', '福利', '诱惑', '深夜', '晚安', '唇', '腿', '私信', 'seductive', 'flirty', 'teasing', 'thirst', 'baddie', 'spicy'],
+    light: ['心动', '可爱', '甜', '糖', '萌', 'crush', 'vibes', 'mood', 'lil', 'doll', 'babygirl', 'snack']
+  };
+  const EDGY_TIERS = [
+    { max: 15, label: { zh: '清水', en: 'Pure' } },
+    { max: 35, label: { zh: '微醺', en: 'Tipsy' } },
+    { max: 55, label: { zh: '欲说还休', en: 'Hinting' } },
+    { max: 75, label: { zh: '擦边大师', en: 'Edgy Pro' } },
+    { max: 100, label: { zh: '全网皆擦', en: 'Fully Edgy' } }
+  ];
+  const EDGY_VERDICTS = [
+    [
+      { zh: '干净得像刚注册的账号，X 欠你一面锦旗。', en: 'Cleaner than a fresh account; X owes you a medal.' },
+      { zh: '你的主页自带圣光，擦边这个词跟你无缘。', en: 'Your profile radiates purity; "edgy" is not in your dictionary.' },
+      { zh: '全网都在擦，只有你在认真上班。', en: 'Everyone is edging, and you are just clocking in.' }
+    ],
+    [
+      { zh: '有点氛围感，但还差临门一脚，建议多打几个擦边球。', en: 'Some vibe, but not quite there; a few more near-misses would help.' },
+      { zh: '嘴上说着清纯，字里行间全是暗示，老演员了。', en: 'Claims innocence, drips hints — quite the actor.' },
+      { zh: '擦边擦到一半刹车，吊胃口第一名。', en: 'Edges halfway then brakes — the master of teasing.' }
+    ],
+    [
+      { zh: '这 bio 是懂流量的，擦得精准又不至于被封号。', en: 'That bio knows traffic — edgy enough without getting banned.' },
+      { zh: '建议 X 给你颁发“擦边学位”，专业对口。', en: 'X should award you an honorary Edgy Degree.' },
+      { zh: '欲说还休四个字被你玩明白了。', en: 'You have mastered the art of saying everything by saying nothing.' }
+    ],
+    [
+      { zh: '擦边大师本师，评论区里都是慕名而来的。', en: 'The edgy pro himself; the replies came for the show.' },
+      { zh: '这账号是懂流量的，擦得精准又不至于被封号。', en: 'Knows exactly how far to go — precise edging without the ban.' },
+      { zh: '建议 X 给你颁发“擦边学位”，专业对口。', en: 'X should award you an honorary Edgy Degree with distinction.' }
+    ],
+    [
+      { zh: '兄弟，你这账号擦得全网皆知，小心被限流。', en: 'Bro, your whole profile is known for this — watch out for shadowbans.' },
+      { zh: '你的 bio 已经不是擦边了，是明着来。', en: 'Your bio is not edging anymore — it is just straight up.' },
+      { zh: '全网皆擦，你擦出了高度，擦出了风格。', en: 'Fully edgy — with height, with style.' }
+    ]
+  ];
+  C.edgyOf = function (p, opts) {
+    const bio = String(p.bio || '');
+    const text = (bio + ' ' + String(p.name || '')).toLowerCase();
+    let a = 0;
+    for (const w of EDGY_WORDS.heavy) if (text.indexOf(w) >= 0) a += 16;
+    for (const w of EDGY_WORDS.mid) if (text.indexOf(w) >= 0) a += 9;
+    for (const w of EDGY_WORDS.light) if (text.indexOf(w) >= 0) a += 4;
+    a = Math.min(a, 60);
+    let b = 0;
+    const hasLink = /(https?:\/\/|t\.me\/|instagram\.com|onlyfans|patreon)/i.test(bio);
+    if (hasLink) b += 8;
+    if (!(opts && opts.manual) && !p.avatar) b += 6;
+    if (p.createdDays >= 0 && p.createdDays < 30) b += 8;
+    if (p.statusesCount < 30 && p.followers >= 1000) b += 6;
+    if (p.followers / Math.max(p.following, 1) < 0.3) b += 4;
+    if (p.verified) b -= 10;
+    if (p.followers >= 50000) b -= 6;
+    b = Math.max(b, -20);
+    const score = Math.max(0, Math.min(100, Math.round(a + b)));
+    let tier = EDGY_TIERS[0];
+    for (const t of EDGY_TIERS) if (score <= t.max) { tier = t; break; }
+    const idx = EDGY_TIERS.indexOf(tier);
+    const rnd = C.seeded('edgy:' + String(p.handle || '').toLowerCase() + ':' + Math.floor(score / 10));
+    const verdict = EDGY_VERDICTS[idx][Math.floor(rnd() * EDGY_VERDICTS[idx].length)];
+    return { score, tier: L(tier.label), verdict: L(verdict), hint: hasLink };
+  };
+
   /* ---------- 从原始档案+近帖组装 scan 结果（后端与浏览器 mock 共用） ----------
      raw: { handle, name, avatar|null, avatarHue|null, followers, following, createdDays,
             statusesCount, verified, silentDays, posts:[{likes,rt,rep,isRt,isReply}] }
@@ -447,6 +518,7 @@
       share_url: base + '#/u/' + p.handle,
       _features: c.features
     };
+    result.edgy = C.edgyOf(p, opts);
     result.theme = C.posterTheme(result);
     return result;
   };
@@ -454,13 +526,17 @@
   /* ---------- 分享文案 ---------- */
   C.shareText = function (result, forSelf) {
     const badge = result.egg_badge ? ' · ' + result.egg_badge : '';
+    const edgy = (result.edgy && typeof result.edgy.score === 'number')
+      ? (LANG === 'en' ? ' Edgy ' + result.edgy.score + ' (' + result.edgy.tier + ').'
+                       : ' 擦边值 ' + result.edgy.score + '（' + result.edgy.tier + '）。')
+      : '';
     if (LANG === 'en') {
       const who = forSelf ? 'My' : '@' + result.username + "'s";
       return who + ' X Power is ' + result.score + ' (' + result.tier + ' · ' + result.title + badge + '). ' +
-             result.share_clause + '. Try yours: ' + result.share_url;
+             result.share_clause + '.' + edgy + ' Try yours: ' + result.share_url;
     }
     const who = forSelf ? '我的' : '@' + result.username + ' 的';
-    return `${who}X战力是 ${result.score}（${result.tier}·${result.title}${badge}）。${result.share_clause}。你也来测：${result.share_url}`;
+    return `${who}X战力是 ${result.score}（${result.tier}·${result.title}${badge}）。${result.share_clause}。${edgy}你也来测：${result.share_url}`;
   };
 
   return C;

@@ -231,6 +231,6 @@
               { likes: 12, rt: 2, rep: 5, isRt: false, isReply: false }],
       isPrivate: false, lock: false
     };
-    return core.buildResult(p, { shareBase: location.origin + location.pathname, partial: true });
+    return core.buildResult(p, { shareBase: location.origin + location.pathname, partial: true, manual: true });
   };
 })();

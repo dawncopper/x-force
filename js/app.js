@@ -19,6 +19,7 @@
     rAvatar: $('rAvatar'), rName: $('rName'), rHandle: $('rHandle'), rTier: $('rTier'),
     rScore: $('rScore'), rFollowers: $('rFollowers'), rPartial: $('rPartial'),
     rTitle: $('rTitle'), rAlias: $('rAlias'), rSpecial: $('rSpecial'), rComment: $('rComment'),
+  rEdgy: $('rEdgy'), rEdgyScore: $('rEdgyScore'), rEdgyTier: $('rEdgyTier'), rEdgyVerdict: $('rEdgyVerdict'), rEdgyBar: $('rEdgyBar'), rEdgyHint: $('rEdgyHint'),
     rRarity: $('rRarity'), rEggBadge: $('rEggBadge'), rerollBtn: $('rerollBtn'),
     copyBtn: $('copyBtn'), posterBtn: $('posterBtn'), againBtn: $('againBtn'), vsBtn: $('vsBtn'),
     challengeBtn: $('challengeBtn'), trendBtn: $('trendBtn'),
@@ -148,6 +149,17 @@
     els.rSpecial.hidden = !r.special_title;
     if (r.special_title) els.rSpecial.textContent = T('result.specialPrefix') + r.special_title;
     els.rComment.textContent = r.comment;
+
+    // 擦边值（B 画像为主 A 词表为辅 · 娱乐向）
+    const hasEdgy = !!(r.edgy && typeof r.edgy.score === 'number');
+    els.rEdgy.hidden = !hasEdgy;
+    if (hasEdgy) {
+      els.rEdgyScore.textContent = r.edgy.score;
+      els.rEdgyTier.textContent = T('edgy.tierWrap', { t: r.edgy.tier });
+      els.rEdgyVerdict.textContent = r.edgy.verdict;
+      els.rEdgyBar.style.width = r.edgy.score + '%';
+      els.rEdgyHint.hidden = !r.edgy.hint;
+    }
 
     // 稀有度徽章（第 3 项：盲盒换梗）
     const rarityDef = r.rarity && E.rarityOf(r.rarity);
@@ -931,7 +943,8 @@
       handle.textContent = '@' + it.handle;
       const meta = document.createElement('p');
       meta.className = 'lb-row__meta';
-      meta.textContent = T('lb.best') + ' ' + it.maxScore + ' · ' + T('lb.scans') + ' ' + it.count;
+      meta.textContent = T('lb.best') + ' ' + it.maxScore + ' · ' + T('lb.scans') + ' ' + it.count +
+        (it.maxEdgy ? ' · ' + T('lb.edgy') + ' ' + it.maxEdgy : '');
       body.append(handle, meta);
       const count = document.createElement('span');
       count.className = 'lb-row__count';

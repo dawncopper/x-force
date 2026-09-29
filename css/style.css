@@ -344,6 +344,25 @@ a { color: var(--tint); text-decoration: none; }
   line-height: 1.55;
 }
 
+/* 擦边值（娱乐向） */
+.edgy-card {
+  border: 1px solid color-mix(in oklch, var(--tint) 30%, transparent);
+  background: linear-gradient(160deg, color-mix(in oklch, var(--tint) 9%, var(--bg-soft)), var(--bg-soft));
+  border-radius: var(--r-md);
+  padding: 14px 18px; margin-bottom: 20px;
+}
+.edgy-card__head { display: flex; align-items: baseline; gap: 8px; }
+.edgy-card__label { font-size: 13px; font-weight: 700; color: var(--fg-2); letter-spacing: .04em; }
+.edgy-card__tier { font-size: 14px; font-weight: 700; color: color-mix(in oklch, var(--tint) 85%, #fff); }
+.edgy-card__score { margin-left: auto; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: linear-gradient(120deg, #ff6fb5, #b06fff);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.edgy-bar { height: 6px; border-radius: 999px; background: var(--bg-soft); overflow: hidden; margin-top: 8px; }
+.edgy-bar i { display: block; height: 100%; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #ff6fb5, #b06fff); transition: width .9s var(--ease-out); }
+.edgy-card__verdict { margin-top: 8px; font-size: 13.5px; line-height: 1.5; color: var(--fg-2); }
+.edgy-card__hint { margin-top: 4px; font-size: 12px; color: var(--warn); }
+
 /* 四维条 */
 .dims { display: flex; flex-direction: column; gap: 12px; }
 .dim { display: grid; grid-template-columns: 44px 1fr 30px; align-items: center; gap: 12px; }
