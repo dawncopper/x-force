@@ -405,10 +405,12 @@
      A 词表扫描 bio+name（重/中/轻三档加权，封顶 60）
      B 画像信号（引流链/无头像/新号/异常涨粉/粉关比/认证/体量，-20 ~ +32）
      输出 { score(0-100), tier, verdict, hint } ---------- */
+  // 擦边算法版本：词表/画像信号调整后 bump，旧缓存（edgy_v 不一致）自动失效重算
+  C.EDGY_VERSION = 2;
   const EDGY_WORDS = {
-    heavy: ['约炮', '裸聊', '裸照', '全裸', '涩图', '色图', '福利姬', '原味', '丝袜', '内衣', '私房照', '大尺度', '私密', 'nsfw', 'onlyfans', 'lewd', 'explicit', 'porn', 'nude'],
-    mid: ['撩', '暗示', '欲', '性感', '身材', '写真', '福利', '诱惑', '深夜', '晚安', '唇', '腿', '私信', 'seductive', 'flirty', 'teasing', 'thirst', 'baddie', 'spicy'],
-    light: ['心动', '可爱', '甜', '糖', '萌', 'crush', 'vibes', 'mood', 'lil', 'doll', 'babygirl', 'snack']
+    heavy: ['约炮', '裸聊', '裸照', '全裸', '涩图', '色图', '福利姬', '原味', '丝袜', '内衣', '私房照', '大尺度', '私密', '擦边', 'nsfw', 'onlyfans', 'lewd', 'explicit', 'porn', 'nude'],
+    mid: ['撩', '暗示', '欲', '性感', '身材', '写真', '福利', '诱惑', '深夜', '晚安', '唇', '腿', '私信', '想擦', '求夸', '同城', 'seductive', 'flirty', 'teasing', 'thirst', 'baddie', 'spicy'],
+    light: ['心动', '可爱', '甜', '糖', '萌', '夸夸', 'crush', 'vibes', 'mood', 'lil', 'doll', 'babygirl', 'snack']
   };
   const EDGY_TIERS = [
     { max: 15, label: { zh: '清水', en: 'Pure' } },
@@ -457,7 +459,7 @@
     if (hasLink) b += 8;
     if (!(opts && opts.manual) && !p.avatar) b += 6;
     if (p.createdDays >= 0 && p.createdDays < 30) b += 8;
-    if (p.statusesCount < 30 && p.followers >= 1000) b += 6;
+    if (p.statusesCount < 100 && p.followers >= 1000) b += 6;
     if (p.followers / Math.max(p.following, 1) < 0.3) b += 4;
     if (p.verified) b -= 10;
     if (p.followers >= 50000) b -= 6;
@@ -519,6 +521,7 @@
       _features: c.features
     };
     result.edgy = C.edgyOf(p, opts);
+    result.edgy_v = C.EDGY_VERSION;
     result.theme = C.posterTheme(result);
     return result;
   };
